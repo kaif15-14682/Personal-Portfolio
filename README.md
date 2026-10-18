@@ -48,6 +48,7 @@ Personal-Portfolio/
 ├── assets/
 │   ├── profile.jpg     Portrait
 │   ├── favicon.svg     Browser tab icon
+│   ├── Sheikh_Kaif_CV.pdf  Downloadable CV
 │   └── screenshot.png  Image used in this README
 └── README.md
 ```
@@ -76,9 +77,9 @@ In VS Code, the **Live Server** extension reloads the page every time you save.
 
 GitHub Pages republishes the site within a minute or two.
 
-### Add a downloadable CV
+### Update the CV
 
-Save a public version of your CV as `assets/Sheikh_Kaif_CV.pdf`. Leave out the phone number, home address and reference contacts. The **Download CV** button appears automatically once that file exists.
+Replace `assets/Sheikh_Kaif_CV.pdf` with a new PDF of the same name to update the CV. The **Download CV** button shows only while that file exists.
 
 ## Contact
 

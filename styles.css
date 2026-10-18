@@ -114,19 +114,8 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
   gap: 1rem 2rem;
   flex-wrap: wrap;
 }
-.brand { display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 700; color: var(--navy); text-decoration: none; }
+.brand { display: inline-flex; align-items: center; font-size: 1.125rem; font-weight: 700; color: var(--navy); text-decoration: none; }
 .brand:hover { color: var(--navy); text-decoration: none; }
-.brand__mark {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 8px;
-  background: var(--navy);
-  color: #fff;
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
-}
 .topnav { display: flex; gap: 0.25rem; margin-left: auto; }
 .topnav a {
   padding: 0.45rem 0.7rem;
