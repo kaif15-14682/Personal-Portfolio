@@ -78,7 +78,7 @@ GitHub Pages republishes the site within a minute or two.
 
 ### Update the CV
 
-Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the pdf.
+Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the PDF.
 
 ## Contact
 
