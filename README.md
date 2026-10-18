@@ -62,20 +62,6 @@ git clone https://github.com/kaif15-14682/Personal-Portfolio.git
 cd Personal-Portfolio
 ```
 
-
-## Update the site
-
-1. Edit the files.
-2. Publish the changes:
-
-   ```bash
-   git add -A
-   git commit -m "Describe the change"
-   git push
-   ```
-
-GitHub Pages republishes the site within a minute or two.
-
 ### Update the CV
 
 Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the PDF.
