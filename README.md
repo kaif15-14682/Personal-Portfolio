@@ -62,7 +62,6 @@ git clone https://github.com/kaif15-14682/Personal-Portfolio.git
 cd Personal-Portfolio
 ```
 
-In VS Code, the **Live Server** extension reloads the page every time you save.
 
 ## Update the site
 
@@ -79,7 +78,7 @@ GitHub Pages republishes the site within a minute or two.
 
 ### Update the CV
 
-Replace `assets/Sheikh_Kaif_CV.pdf` with a new PDF of the same name to update the CV. The **Download CV** button shows only while that file exists.
+Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the pdf.
 
 ## Contact
 
