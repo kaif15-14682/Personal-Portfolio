@@ -1,0 +1,7 @@
+# Private originals: the CV has a phone number, home address and reference contacts,
+# and the thesis has signed approval pages. Keep them out of the public repo.
+/Sheikh_Kaif_CV_.pdf
+/new_1.pdf
+
+# Local browser-testing output
+/.playwright-mcp/
