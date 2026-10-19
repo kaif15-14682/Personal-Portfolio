@@ -163,17 +163,7 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 .hero__where { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); }
 .hero__where svg { width: 1.1rem; height: 1.1rem; }
 .hero .icons { margin-top: 0.4rem; }
-.hero__photo {
-  width: 9rem;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 18px;
-  grid-row: 1;
-}
-.hero .lead, .hero .glance { grid-column: 1 / -1; }
 @media (min-width: 56rem) {
-  .hero { grid-template-columns: 1fr 15rem; column-gap: 4rem; }
-  .hero__photo { grid-row: auto; width: 100%; box-shadow: 0 18px 40px -24px rgb(29 33 39 / 0.45); }
   .hero .lead { margin-top: 0; }
 }
 
@@ -312,13 +302,12 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 .deck__track {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  /* Every card stretches to the tallest one, so the box never grows or shrinks between projects. */
+  align-items: stretch;
   gap: 1.25rem;
   /* Side padding lets the first and last cards sit in the centre. */
   padding: 1.25rem calc((100cqw - var(--slide)) / 2);
   box-sizing: content-box;
-  height: var(--deck-h, auto);
-  transition: height 0.4s ease;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
@@ -336,8 +325,23 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
   opacity: calc(1 - var(--a, 0) * 0.5);
   will-change: transform, opacity;
 }
+/* On wide screens shorter cards centre their content in the shared height. On phones the card is taller
+   than the screen, so content starts at the top where the reader begins. */
+.deck__track > .project { position: relative; align-content: start; }
+@media (min-width: 56rem) { .deck__track > .project { align-content: center; align-items: center; } }
 .deck__track > .project:not(.is-active) { cursor: pointer; }
-.deck__track > .project.is-active { box-shadow: 0 30px 80px -40px rgb(41 151 255 / 0.35); }
+/* The glow under the front card fades across as the carousel turns, instead of switching instantly. */
+.deck__track > .project::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 30px 80px -40px rgb(41 151 255 / 0.35);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.deck__track > .project.is-active::after { opacity: 1; }
 
 .deck__controls { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; }
 .deck__controls[hidden] { display: none; }
@@ -355,7 +359,7 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 .deck__btn:hover:not(:disabled) { border-color: var(--muted); }
 .deck__btn:disabled { opacity: 0.35; cursor: default; }
 .deck__btn svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.deck__dots { display: flex; gap: 0.4rem; }
+.deck__dots { position: relative; display: flex; gap: 0.5rem; }
 .deck__dots button {
   width: 0.5rem;
   height: 0.5rem;
@@ -364,15 +368,28 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
   border-radius: 999px;
   background: var(--line-strong);
   cursor: pointer;
-  transition: width 0.25s, background-color 0.25s;
+  transition: background-color 0.25s;
 }
-.deck__dots button[aria-current="true"] { width: 1.5rem; background: var(--accent); }
+.deck__dots button[aria-current="true"] { background: var(--accent); }
+/* One pill glides over the active dot. Moving it with transform avoids the layout cost of resizing the dots. */
+.deck__pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.3rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+  pointer-events: none;
+  transform: translateX(calc(var(--i, 0) * 1rem - 0.4rem));
+  transition: transform 0.45s cubic-bezier(.2, .7, .2, 1);
+}
 .deck__count { min-width: 3.5rem; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
 @media (max-width: 30rem) { .deck__count { display: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .deck__track { transition: none; }
   .deck__track > .project { transform: none; opacity: 1; }
-  .deck__dots button { transition: none; }
+  .deck__track > .project::after { transition: none; }
+  .deck__dots button, .deck__pill { transition: none; }
 }
 
 /* Code and terminal windows */
@@ -459,7 +476,11 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 }
 .tabs button:hover { color: var(--navy); }
 .tabs button[aria-selected="true"] { background: var(--surface); color: var(--navy); font-weight: 600; box-shadow: none; }
-.pane[hidden] { display: none; }
+/* All three panes share one grid cell, so the card is always as tall as the tallest pane and doesn't jump when the tab changes.
+   Hidden panes keep their space but are invisible and out of the tab order. */
+.project--wide .project__visual { display: grid; grid-template-columns: minmax(0, 1fr); }
+.project--wide .project__visual > .pane { grid-area: 2 / 1; }
+.pane[hidden] { display: block; visibility: hidden; }
 .pane__note { margin-top: 0.75rem; font-size: 0.8125rem; color: var(--muted); }
 
 /* Step chart */
@@ -659,9 +680,8 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 
 .foot { padding: 2rem 0 2.5rem; font-size: 0.875rem; color: var(--muted); }
 
-/* ---------- Dark, spotlit intro (inspired by Apple's product pages) ----------
-   The intro sits on a black stage under one beam of light that falls on the photo,
-   with a faint glow where the beam meets the floor. The light fades in once on load.
+/* ---------- Dark intro (inspired by Apple's product pages) ----------
+   The intro sits on a black stage with slow liquid silk behind it.
    The rest of the page continues on the same black, with softer light over each section. */
 body { overflow-x: clip; }
 
@@ -687,59 +707,31 @@ body { overflow-x: clip; }
   background: #000;
 }
 
-/* The beam: a soft cone from above the photo down to the floor */
-.hero::after {
-  content: "";
+/* Liquid silk: black satin folds drawn live by the script on a WebGL canvas behind the intro.
+   It renders at half size (the folds are soft, so the upscale is invisible), fades in once, and stays plain black without WebGL. */
+.silk {
   position: absolute;
   z-index: -1;
   pointer-events: none;
-  top: -3rem;
-  left: 4.5rem;
-  width: 22rem;
-  height: 38rem;
-  transform: translateX(-50%);
-  background:
-    radial-gradient(3rem 0.9rem at 50% 1rem, #fff, rgb(220 230 255 / 0.6) 40%, transparent 75%),
-    radial-gradient(10rem 1.4rem at 50% 95%, rgb(225 233 255 / 0.45), transparent 70%),
-    radial-gradient(16rem 4rem at 50% 95%, rgb(190 205 255 / 0.12), transparent 70%),
-    linear-gradient(to right, transparent 30%, rgb(200 214 255 / 0.22) 50%, transparent 70%),
-    linear-gradient(to right, transparent 12%, rgb(190 205 255 / 0.07) 50%, transparent 88%);
-  /* Two masks: a cone that widens towards the floor, and a fade along its length */
-  -webkit-mask-image:
-    radial-gradient(55% 118% at 50% 100%, #000 50%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 70%, rgb(0 0 0 / 0.35) 88%, #000 96%, transparent);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    radial-gradient(55% 118% at 50% 100%, #000 50%, transparent 100%),
-    linear-gradient(to bottom, #000 0%, #000 70%, rgb(0 0 0 / 0.35) 88%, #000 96%, transparent);
-  mask-composite: intersect;
-  filter: blur(16px);
+  top: -6rem;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  height: calc(100% + 6rem);
+  opacity: 0;
+  transition: opacity 1.6s cubic-bezier(.3, 0, .2, 1);
 }
-@media (min-width: 56rem) {
-  .hero::after { left: auto; right: -3.5rem; transform: none; width: 22rem; height: 40rem; }
-}
-@media (min-width: 64rem) { .hero::after { top: -4.5rem; } }
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero::after { opacity: 0; animation: light-on 2.2s cubic-bezier(.3, 0, .2, 1) 0.2s forwards; }
-}
-@keyframes light-on {
-  0% { opacity: 0; }
-  12% { opacity: 0.55; }
-  20% { opacity: 0.2; }
-  100% { opacity: 1; }
-}
-
-.hero__photo {
-  position: relative;
-  box-shadow: 0 30px 80px -30px rgb(190 205 255 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.06);
-}
-@media (min-width: 56rem) {
-  .hero__photo { box-shadow: 0 40px 90px -30px rgb(190 205 255 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.06); }
-}
+.silk.is-on { opacity: 1; }
 
 .hero h1 { color: #f5f5f7; }
-.hero__who { color: #6ea8ff; }
+/* The name in brushed silver, matching the silk behind it */
+.hero__who {
+  justify-self: start;
+  color: #d2d2d7;
+  background: linear-gradient(100deg, #8e9198 0%, #f5f5f7 38%, #b9bcc3 58%, #f5f5f7 78%, #7d8087 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 .hero__where { color: #86868b; }
 .hero .lead { color: #a1a1a6; }
 
@@ -780,3 +772,150 @@ body { overflow-x: clip; }
 .project, .matrix-wrap, .timeline > li, .edu__card, .contact {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
+
+/* ---------- Motion ----------
+   Everything below moves with transform, translate or opacity, so it runs on the GPU without re-laying out the page.
+   The script adds the classes, so with JavaScript off or reduced motion turned on the page just shows everything. */
+
+/* Reveal on scroll: .reveal is added only to elements below the fold, then .is-in once each scrolls into view */
+@keyframes reveal { from { opacity: 0; transform: translateY(18px); } }
+.reveal { opacity: 0; }
+.reveal.is-in { opacity: 1; animation: reveal 0.7s cubic-bezier(.2, .7, .2, 1) calc(var(--i, 0) * 90ms) both; }
+
+/* Headline rise: the script wraps each word in a mask and the words slide up one after another */
+#about-title .w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.12em; margin-bottom: -0.12em; }
+#about-title .w > span { display: inline-block; }
+@keyframes word-up { from { transform: translateY(105%); } }
+@keyframes appear { to { opacity: 1; } }
+@keyframes fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  /* Hidden until split; shows anyway after 1s if the script never runs */
+  .js #about-title:not(.is-split) { opacity: 0; animation: appear 0.4s ease 1s forwards; }
+  #about-title.is-split .w > span { animation: word-up 0.8s cubic-bezier(.2, .7, .2, 1) calc(var(--i) * 35ms + 150ms) both; }
+  .js .hero__who { animation: fade 0.6s ease both; }
+}
+
+/* Card lift: uses the separate translate property so it never fights the reveal animation's transform */
+.edu__card { position: relative; }
+.timeline > li, .edu__card { transition: translate 0.35s cubic-bezier(.2, .7, .2, 1), border-color 0.35s; }
+.timeline > li::after, .edu__card::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 26px 50px -26px rgb(41 151 255 / 0.4);
+  opacity: 0;
+  transition: opacity 0.35s cubic-bezier(.2, .7, .2, 1);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .timeline > li:hover, .edu__card:hover { translate: 0 -4px; border-color: var(--line-strong); }
+  .timeline > li:hover::after, .edu__card:hover::after { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timeline > li:hover, .edu__card:hover { translate: none; }
+}
+
+/* Links: a faint underline at rest, an accent line draws in from the left on hover. Works across wrapped lines. */
+.did a, .matrix thead a {
+  text-decoration: none;
+  background-image: linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--line-strong), var(--line-strong));
+  background-position: 0 100%, 0 100%;
+  background-size: 0 1.5px, 100% 1px;
+  background-repeat: no-repeat;
+  transition: background-size 0.35s cubic-bezier(.2, .7, .2, 1);
+}
+.did a:hover, .did a:focus-visible, .matrix thead a:hover, .matrix thead a:focus-visible {
+  text-decoration: none;
+  background-size: 100% 1.5px, 100% 1px;
+}
+
+/* Buttons: the script leans them toward the pointer; icons nudge forward */
+.btn { transition: translate 0.25s cubic-bezier(.2, .7, .2, 1), background-color 0.2s, border-color 0.2s, color 0.2s; }
+.btn svg { transition: transform 0.25s cubic-bezier(.2, .7, .2, 1); }
+.btn:hover svg { transform: translateX(3px); }
+
+/* 3D tilt on the project visuals, driven by the script. Short transition while moving, longer on release. */
+.tilt { transition: transform 0.5s cubic-bezier(.2, .7, .2, 1); }
+.tilt.is-tilting { transition-duration: 0.12s; }
+.tilt-glare { position: relative; overflow: hidden; }
+.tilt-glare::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24rem;
+  height: 24rem;
+  margin: -12rem 0 0 -12rem;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.08), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(var(--gx, 0), var(--gy, 0));
+  transition: opacity 0.3s;
+}
+.tilt-glare.is-tilting::after { opacity: 1; }
+
+/* Focus brackets: four corners frame the pointer, and jump out to frame whatever clickable thing is under it.
+   The normal cursor stays. Mouse only. */
+.cursor__corner, .cursor__dot, .peek { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; opacity: 0; will-change: transform; }
+.cursor__corner { width: 10px; height: 10px; border: 0 solid rgb(245 245 247 / 0.85); transition: opacity 0.25s, border-color 0.2s; }
+.cursor__corner:nth-child(1) { border-top-width: 1.5px; border-left-width: 1.5px; }
+.cursor__corner:nth-child(2) { border-top-width: 1.5px; border-right-width: 1.5px; }
+.cursor__corner:nth-child(3) { border-bottom-width: 1.5px; border-left-width: 1.5px; }
+.cursor__corner:nth-child(4) { border-bottom-width: 1.5px; border-right-width: 1.5px; }
+.cursor__dot { width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #f5f5f7; transition: opacity 0.2s; }
+.cursor-on .cursor__corner, .cursor-on .cursor__dot { opacity: 1; }
+.cursor-hover .cursor__corner { border-color: var(--accent); }
+.cursor-hover .cursor__dot { opacity: 0; }
+
+/* Project preview: hovering a project name in the skills table floats a summary card beside the pointer.
+   --px and --py flip it to the other side near the window edges. */
+.peek {
+  width: 17rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 24px 50px -20px rgb(0 0 0 / 0.9);
+  translate: var(--px, 18px) var(--py, 18px);
+  scale: 0.92;
+  transform-origin: top left;
+  transition: opacity 0.2s, scale 0.25s cubic-bezier(.2, .7, .2, 1);
+}
+.peek.is-on { opacity: 1; scale: 1; }
+.peek.is-left { --px: calc(-100% - 18px); }
+.peek.is-up { --py: calc(-100% - 18px); }
+.peek__meta { font-size: 0.75rem; font-weight: 600; color: var(--accent-ink); }
+.peek__title { font-weight: 600; color: var(--navy); line-height: 1.3; }
+.peek__text { font-size: 0.8125rem; color: var(--body); line-height: 1.5; }
+.peek__stack { font-size: 0.75rem; color: var(--muted); }
+
+/* Click ripple: a ring spreads from each click */
+@keyframes ripple { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(5); opacity: 0; } }
+.click-ring { position: fixed; top: 0; left: 0; z-index: 100; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; border: 1.5px solid var(--accent-ink); pointer-events: none; animation: ripple 0.6s cubic-bezier(.2, .7, .2, 1) forwards; }
+
+/* Chart draws itself: the line traces left to right, then the points, shading and marker land */
+@keyframes draw { from { stroke-dashoffset: 1; } }
+@keyframes pop { from { opacity: 0; transform: scale(0); } }
+.step-chart.play .line { stroke-dasharray: 1; animation: draw 1.6s cubic-bezier(.45, 0, .2, 1) both; }
+.step-chart.play .area { animation: fade 0.8s ease 1.1s both; }
+.step-chart.play .point { transform-box: fill-box; transform-origin: center; animation: pop 0.35s cubic-bezier(.2, .7, .2, 1) calc(var(--i) * 140ms + 150ms) both; }
+.step-chart.play .marker, .step-chart.play .marker-label { animation: fade 0.4s ease 1.6s both; }
+
+/* Bars grow from zero, one after another */
+@keyframes grow { from { transform: scaleX(0); } }
+.bars i { transform-origin: left; }
+.bars.play i { animation: grow 0.9s cubic-bezier(.2, .7, .2, 1) calc(var(--i, 0) * 90ms) both; }
+
+/* Timeline draws: an accent line fills over the grey one as you scroll, and each point lights when it is reached */
+.timeline::after { content: ""; position: absolute; left: 0.4rem; top: 0.5rem; bottom: 0.5rem; width: 2px; background: var(--accent); transform-origin: top; transform: scaleY(var(--p, 0)); }
+.timeline > li { z-index: 1; }
+.timeline.is-live > li::before { transition: border-color 0.3s; }
+.timeline.is-live > li:not(.is-lit)::before { border-color: var(--line-strong); }
+
+/* Scroll progress: a thin line along the bottom of the top bar */
+.progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--accent); transform-origin: left; transform: scaleX(0); pointer-events: none; }
+
