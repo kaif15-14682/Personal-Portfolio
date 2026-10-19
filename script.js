@@ -146,10 +146,115 @@ tabs.forEach((tab, i) => {
   });
 });
 
+/* ---------- Project carousel ---------- */
+
+const projects = [...document.querySelectorAll(".project")];
+const track = document.getElementById("deck-track");
+const deckControls = document.querySelector(".deck__controls");
+const deckPrev = document.getElementById("deck-prev");
+const deckNext = document.getElementById("deck-next");
+const deckDots = document.getElementById("deck-dots");
+const deckCount = document.getElementById("deck-count");
+let slides = projects;
+let active = 0;
+
+// Offset of each card from the centre of the track, in card widths.
+// CSS turns that into the 3D tilt, scale and fade.
+function paintDeck() {
+  const mid = track.scrollLeft + track.clientWidth / 2;
+  let nearest = 0;
+  let best = Infinity;
+  slides.forEach((s, i) => {
+    const o = (s.offsetLeft + s.offsetWidth / 2 - mid) / s.offsetWidth;
+    s.style.setProperty("--o", Math.max(-1.5, Math.min(1.5, o)).toFixed(3));
+    s.style.setProperty("--a", Math.min(1, Math.abs(o)).toFixed(3));
+    if (Math.abs(o) < best) { best = Math.abs(o); nearest = i; }
+  });
+  if (nearest !== active || !slides[active].classList.contains("is-active")) setActive(nearest);
+}
+
+function setActive(i) {
+  active = i;
+  projects.forEach((p) => p.classList.toggle("is-active", p === slides[i]));
+  [...deckDots.children].forEach((d, j) => d.setAttribute("aria-current", String(j === i)));
+  deckCount.textContent = `${i + 1} / ${slides.length}`;
+  deckPrev.disabled = i === 0;
+  deckNext.disabled = i === slides.length - 1;
+  fitDeck();
+}
+
+// The track takes the height of the card in front, so short cards don't leave a gap.
+function fitDeck() {
+  if (slides[active]) track.style.setProperty("--deck-h", `${slides[active].offsetHeight}px`);
+}
+
+function goTo(i, instant = false) {
+  const s = slides[Math.max(0, Math.min(slides.length - 1, i))];
+  if (!s) return;
+  track.scrollTo({
+    left: s.offsetLeft - (track.clientWidth - s.offsetWidth) / 2,
+    behavior: instant || reduceMotion ? "auto" : "smooth",
+  });
+}
+
+function resetDeck() {
+  slides = projects.filter((p) => !p.hidden);
+  deckDots.textContent = "";
+  slides.forEach((s, i) => {
+    const dot = document.createElement("button");
+    dot.type = "button";
+    dot.setAttribute("aria-label", `Project ${i + 1}: ${s.querySelector("h3").textContent}`);
+    dot.addEventListener("click", () => goTo(i));
+    deckDots.append(dot);
+  });
+  deckControls.hidden = slides.length < 2;
+  if (!slides.length) return;
+  active = 0;
+  goTo(0, true);
+  setActive(0);
+  paintDeck();
+}
+
+if (track) {
+  let frame = 0;
+  const schedule = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; if (slides.length) paintDeck(); }); };
+  track.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule);
+  // Cards change height on resize and when the ProstadeNet tabs switch.
+  if ("ResizeObserver" in window) {
+    const ro = new ResizeObserver(fitDeck);
+    projects.forEach((p) => ro.observe(p));
+  }
+
+  deckPrev.addEventListener("click", () => goTo(active - 1));
+  deckNext.addEventListener("click", () => goTo(active + 1));
+  track.addEventListener("keydown", (e) => {
+    if (e.target !== track) return;
+    const keys = { ArrowLeft: active - 1, ArrowRight: active + 1, Home: 0, End: slides.length - 1 };
+    if (!(e.key in keys)) return;
+    e.preventDefault();
+    goTo(keys[e.key]);
+  });
+
+  // A card turned to the side is brought to the front first instead of following its links.
+  track.addEventListener("click", (e) => {
+    const card = e.target.closest(".project");
+    if (!card || card.classList.contains("is-active")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    goTo(slides.indexOf(card));
+  }, true);
+  track.addEventListener("focusin", (e) => {
+    const card = e.target.closest(".project");
+    if (card && !card.classList.contains("is-active")) goTo(slides.indexOf(card));
+  });
+
+  resetDeck();
+}
+
 /* ---------- Project filters ---------- */
 
 const filterButtons = [...document.querySelectorAll(".filters button")];
-const projects = [...document.querySelectorAll(".project")];
 const empty = document.getElementById("empty");
 function applyFilter(filter) {
   let shown = 0;
@@ -160,14 +265,19 @@ function applyFilter(filter) {
   });
   filterButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
   empty.hidden = shown > 0;
+  if (track) resetDeck();
 }
 document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => applyFilter(b.dataset.filter)));
 
-// Matrix header links jump to a project; make sure it isn't filtered out first.
+// Matrix header links jump to a project; make sure it isn't filtered out, then turn the carousel to it.
 document.querySelectorAll('.matrix thead a').forEach((a) => {
-  a.addEventListener("click", () => {
+  a.addEventListener("click", (e) => {
     const target = document.querySelector(a.getAttribute("href"));
-    if (target && target.hidden) applyFilter("all");
+    if (!target || !track) return;
+    e.preventDefault();
+    if (target.hidden) applyFilter("all");
+    document.getElementById("projects").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+    goTo(slides.indexOf(target));
   });
 });
 

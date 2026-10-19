@@ -93,6 +93,9 @@
           <button type="button" data-filter="tools" aria-pressed="false">Tools</button>
         </div>
 
+        <div class="deck" role="region" aria-roledescription="carousel" aria-label="Projects">
+        <div class="deck__track" id="deck-track" tabindex="0" aria-label="Projects, use the arrow keys to move between them">
+
         <!-- School management -->
         <article class="project" data-tags="web" id="p-school">
           <div class="project__info">
@@ -329,6 +332,19 @@ Password added for github.</code></pre>
           </figure>
         </article>
 
+        </div>
+        <div class="deck__controls">
+          <button type="button" class="deck__btn" id="deck-prev" aria-label="Previous project">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+          </button>
+          <div class="deck__dots" id="deck-dots"></div>
+          <p class="deck__count" id="deck-count" aria-live="polite"></p>
+          <button type="button" class="deck__btn" id="deck-next" aria-label="Next project">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+        </div>
+
         <p class="empty" id="empty" hidden>No projects in this category. <button type="button" class="linkish" data-filter="all">Show all projects</button></p>
       </section>
 
@@ -425,8 +441,6 @@ Password added for github.</code></pre>
             <svg class="edu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9 12 4.5 21.5 9 12 13.5 2.5 9Zm4 2.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3M21.5 9v5" /></svg>
             <h3>BSc in Computer Science &amp; Engineering</h3>
             <p>Daffodil International University, 2021 – 2025</p>
-            <p class="edu__cgpa"><span>CGPA</span><b>3.45</b><span>/ 4.00</span></p>
-            <div class="meter" aria-hidden="true"><i style="--w: 86.25%"></i></div>
             <p class="edu__note">Thesis: ProstadeNet, presented 14 May 2025.</p>
           </div>
           <div class="edu__card">

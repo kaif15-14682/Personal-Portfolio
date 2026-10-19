@@ -12,7 +12,7 @@ Personal portfolio of **Sheikh Kaif**, a Computer Science & Engineering graduate
 - **Projects:** six projects you can filter by area. Each one comes with a visual that shows how it works.
 - **Skills:** a table that links each skill to the projects where I used it.
 - **Experience:** a timeline of work and research.
-- **Education & achievements:** degree, CGPA and competitions.
+- **Education & achievements:** degree and competitions.
 - **Contact:** email, plus a button that copies my address.
 
 ## Featured projects

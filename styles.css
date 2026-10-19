@@ -306,6 +306,75 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 .project__visual { margin: 0; min-width: 0; }
 .project__visual figcaption { margin-top: 0.65rem; font-size: 0.8125rem; color: var(--muted); }
 
+/* Project carousel: one card in front, neighbours turned away in 3D */
+.deck { position: relative; container-type: inline-size; --slide: 88cqw; }
+@media (min-width: 56rem) { .deck { --slide: 76cqw; } }
+.deck__track {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  /* Side padding lets the first and last cards sit in the centre. */
+  padding: 1.25rem calc((100cqw - var(--slide)) / 2);
+  box-sizing: content-box;
+  height: var(--deck-h, auto);
+  transition: height 0.4s ease;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+.deck__track::-webkit-scrollbar { display: none; }
+.deck__track:focus-visible { outline-offset: -3px; }
+.deck__track > .project {
+  flex: 0 0 var(--slide);
+  margin-bottom: 0;
+  scroll-snap-align: center;
+  transform: perspective(1600px) translateX(calc(var(--o, 0) * -9%)) rotateY(calc(var(--o, 0) * -24deg)) scale(calc(1 - var(--a, 0) * 0.1));
+  opacity: calc(1 - var(--a, 0) * 0.5);
+  will-change: transform, opacity;
+}
+.deck__track > .project:not(.is-active) { cursor: pointer; }
+.deck__track > .project.is-active { box-shadow: 0 30px 80px -40px rgb(41 151 255 / 0.35); }
+
+.deck__controls { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1rem; }
+.deck__controls[hidden] { display: none; }
+.deck__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--navy);
+  cursor: pointer;
+}
+.deck__btn:hover:not(:disabled) { border-color: var(--muted); }
+.deck__btn:disabled { opacity: 0.35; cursor: default; }
+.deck__btn svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.deck__dots { display: flex; gap: 0.4rem; }
+.deck__dots button {
+  width: 0.5rem;
+  height: 0.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: width 0.25s, background-color 0.25s;
+}
+.deck__dots button[aria-current="true"] { width: 1.5rem; background: var(--accent); }
+.deck__count { min-width: 3.5rem; font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+@media (max-width: 30rem) { .deck__count { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .deck__track { transition: none; }
+  .deck__track > .project { transform: none; opacity: 1; }
+  .deck__dots button { transition: none; }
+}
+
 /* Code and terminal windows */
 .window {
   border-radius: var(--radius);
@@ -567,10 +636,6 @@ a:hover { color: var(--accent-ink); text-decoration-thickness: 2px; }
 .edu__icon { width: 2.25rem; height: 2.25rem; padding: 0.45rem; border-radius: var(--radius); background: var(--accent-soft); fill: none; stroke: var(--accent-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 0.9rem; }
 .edu__card h3 { font-size: 1.1rem; }
 .edu__card > p { color: var(--muted); font-size: 0.9375rem; }
-.edu__cgpa { display: flex; align-items: baseline; gap: 0.4rem; margin-top: 1rem !important; }
-.edu__cgpa b { font-size: 1.75rem; color: var(--navy); }
-.meter { height: 0.45rem; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 0.4rem; }
-.meter i { display: block; width: var(--w); height: 100%; background: var(--accent); }
 .edu__note { margin-top: 0.9rem; font-size: 0.875rem !important; }
 .awards { list-style: none; display: grid; gap: 0.85rem; margin-top: 0.75rem; }
 .awards li { display: grid; padding-left: 0.85rem; border-left: 3px solid var(--accent-soft); }
