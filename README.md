@@ -4,7 +4,7 @@ Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tool
 
 **Live site:** https://kaif15-14682.github.io/Personal-Portfolio/
 
-![Portfolio home page](assets/screenshot.png)
+![Portfolio home page](assets/preview.png)
 
 ## Tech
 
@@ -25,7 +25,7 @@ Open `index.html` in a browser.
 index.html      Page content
 styles.css      Styles
 script.js       Interactions and animations
-assets/         CV, favicon and screenshot
+assets/         CV, favicon and preview image
 ```
 
 ## Contact
