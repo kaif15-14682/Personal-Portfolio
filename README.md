@@ -64,7 +64,7 @@ cd Personal-Portfolio
 
 ### Update the CV
 
-Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the PDF.
+Open `assets/Sheikh_Kaif_CV.pdf` and click on the PDF. The **Download CV** button shows only after you open the Portfolio Link.
 
 ## Contact
 
