@@ -8,7 +8,7 @@ Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tool
 
 ## Tech
 
-HTML, CSS and plain JavaScript, with WebGL for the hero background. No framework and no build step.
+HTML, CSS and plain JavaScript, with WebGL for the hero background. GSAP with ScrollTrigger drives the scroll stories and Lenis smooths scrolling, both loaded from a CDN. No framework and no build step.
 
 ## Run locally
 
@@ -25,6 +25,7 @@ Open `index.html` in a browser.
 index.html      Page content
 styles.css      Styles
 script.js       Interactions and animations
+showpieces.js   Scroll stories, running mockups, case studies and skills map
 assets/         CV, favicon and preview image
 ```
 
