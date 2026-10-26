@@ -9,13 +9,95 @@
   <meta name="theme-color" content="#000000">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <!-- Lets the CSS hide the headline before it animates in, so it never flashes. -->
-  <script>document.documentElement.classList.add("js");</script>
+  <!-- The intro plays once per visit: not on a reload in the same tab, and never with reduced motion. -->
+  <script>
+    document.documentElement.classList.add("js");
+    try {
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches && !sessionStorage.getItem("intro-seen")) document.documentElement.classList.add("intro-on");
+    } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Intro: the name rises in while the page loads, then the screen lifts away like a curtain -->
+  <div class="intro" id="intro" data-lenis-prevent>
+    <div class="intro__center">
+      <p class="intro__name" id="intro-name">Sheikh Kaif</p>
+      <p class="intro__role">Backend · Data · Machine learning</p>
+    </div>
+    <p class="intro__where" aria-hidden="true">Dhaka, Bangladesh</p>
+    <p class="intro__count" aria-hidden="true"><span id="intro-count">000</span></p>
+    <i class="intro__line" id="intro-line" aria-hidden="true"></i>
+    <button type="button" class="intro__skip" id="intro-skip">Skip intro</button>
+  </div>
+  <script>
+    (() => {
+      const root = document.documentElement, intro = document.getElementById("intro");
+      if (!root.classList.contains("intro-on")) { intro.remove(); return; }
+      try { sessionStorage.setItem("intro-seen", "1"); } catch (e) {}
+      // The page starts at the top under the intro, whatever the browser remembered.
+      if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+      window.scrollTo(0, 0);
+
+      const name = document.getElementById("intro-name"), count = document.getElementById("intro-count"), line = document.getElementById("intro-line");
+      // One masked span per letter, so each can rise on its own delay
+      name.setAttribute("aria-label", name.textContent);
+      name.innerHTML = [...name.textContent].map((c, i) => (c === " " ? " " : `<span class="ch" aria-hidden="true"><span style="--i: ${i}">${c}</span></span>`)).join("");
+
+      const MIN = 2000, MAX = 5000;
+      let loaded = document.readyState === "complete", shown = 0, t0 = 0, done = false;
+      window.addEventListener("load", () => { loaded = true; }, { once: true });
+
+      const onKey = (e) => {
+        if (e.key !== "Tab") e.preventDefault();
+        finish();
+      };
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("keydown", onKey);
+        count.textContent = "100";
+        line.style.transform = "scaleX(1)";
+        intro.classList.add("is-leaving");
+        // The page's own entrance plays as the curtain lifts.
+        root.classList.remove("intro-on");
+        window.dispatchEvent(new Event("intro:done"));
+        setTimeout(() => intro.remove(), 1100);
+      };
+      // The counter eases toward 90 on its own and only passes it once the page has loaded (or after MAX).
+      const tick = (now) => {
+        if (done) return;
+        if (!t0) t0 = now;
+        const t = now - t0;
+        const p = Math.min(1, t / MIN);
+        const goal = (1 - Math.pow(1 - p, 3)) * (loaded || t > MAX ? 100 : 90);
+        shown += (goal - shown) * 0.14;
+        count.textContent = String(Math.round(shown)).padStart(3, "0");
+        line.style.transform = `scaleX(${(shown / 100).toFixed(3)})`;
+        if (p === 1 && shown > 99.5) { setTimeout(finish, 250); return; }
+        requestAnimationFrame(tick);
+      };
+      // Letters wait for the font, so they don't swap shape mid-rise.
+      const go = () => {
+        if (intro.classList.contains("is-go")) return;
+        intro.classList.add("is-go");
+        requestAnimationFrame(tick);
+      };
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
+      setTimeout(go, 500);
+
+      // Any click, tap, scroll or key skips straight to the page.
+      document.getElementById("intro-skip").addEventListener("click", finish);
+      intro.addEventListener("pointerdown", finish);
+      intro.addEventListener("wheel", (e) => { e.preventDefault(); finish(); }, { passive: false });
+      intro.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+      window.addEventListener("keydown", onKey);
+    })();
+  </script>
+
   <a class="skip" href="#main">Skip to content</a>
 
   <!-- Icon sprite, reused by every icon link -->
@@ -32,6 +114,7 @@
       <nav class="topnav" aria-label="Sections">
         <a href="#about">About</a>
         <a href="#projects">Projects</a>
+        <a href="#how">How they work</a>
         <a href="#skills">Skills</a>
         <a href="#experience">Experience</a>
         <a href="#education">Education</a>
@@ -78,11 +161,26 @@
         </dl>
       </section>
 
+      <!-- Highlights: one number per project. Each tile jumps to its project. -->
+      <section id="highlights" class="highlights bleed" aria-labelledby="highlights-title">
+        <div class="highlights__inner">
+          <h2 id="highlights-title" class="highlights__title">Six projects, one number each</h2>
+          <ul class="hl">
+            <li><a class="hl__tile" href="#p-school"><span class="tag">Web &amp; backend<span class="hl__year"> · 2024</span></span><b class="hl__stat">5</b><span class="hl__label">record modules, each behind role-based permissions</span><span class="hl__title">School management system</span></a></li>
+            <li><a class="hl__tile" href="#p-retool"><span class="tag">Data<span class="hl__year"> · 2026</span></span><b class="hl__stat">SQL <span class="hl__arrow">→</span> <span class="hl__to">Retool</span></b><span class="hl__label">live dashboards and automated workflows</span><span class="hl__title">Operations dashboards</span></a></li>
+            <li><a class="hl__tile" href="#p-prostadenet"><span class="tag">Machine learning<span class="hl__year"> · 2025</span></span><b class="hl__stat">99.83%</b><span class="hl__label">test accuracy across six ISUP grades</span><span class="hl__title">ProstadeNet</span></a></li>
+            <li><a class="hl__tile" href="#p-flutter"><span class="tag">Mobile<span class="hl__year"> · 2024</span></span><b class="hl__stat">4 apps</b><span class="hl__label">weather, quiz, calculator and a combined app</span><span class="hl__title">Flutter apps</span></a></li>
+            <li><a class="hl__tile" href="#p-stroke"><span class="tag">Machine learning<span class="hl__year"> · 2023</span></span><b class="hl__stat">5,110</b><span class="hl__label">patient records, five classifiers compared</span><span class="hl__title">Stroke risk prediction</span></a></li>
+            <li><a class="hl__tile" href="#p-password"><span class="tag">Tools<span class="hl__year"> · 2023</span></span><b class="hl__stat">AES-256</b><span class="hl__label">encryption on every stored password</span><span class="hl__title">Password manager</span></a></li>
+          </ul>
+        </div>
+      </section>
+
       <!-- Projects -->
       <section id="projects" class="block" aria-labelledby="projects-title">
         <div class="block__head">
           <h2 id="projects-title">Projects</h2>
-          <p>Each one shows what I built and how it works. Code links go to my GitHub.</p>
+          <p>Each one shows what I built and how it works. Open a case study for the full story.</p>
         </div>
 
         <div class="filters" role="group" aria-label="Filter projects">
@@ -94,8 +192,8 @@
           <button type="button" data-filter="tools" aria-pressed="false">Tools</button>
         </div>
 
-        <div class="deck" role="region" aria-roledescription="carousel" aria-label="Projects">
-        <div class="deck__track" id="deck-track" tabindex="0" aria-label="Projects, use the arrow keys to move between them">
+        <div class="strip" id="strip">
+        <div class="strip__track" id="strip-track">
 
         <!-- School management -->
         <article class="project" data-tags="web" id="p-school">
@@ -109,12 +207,15 @@
               <li>Put every page behind role-based permissions that admins manage in the app.</li>
             </ul>
             <ul class="stack"><li>Laravel</li><li>PHP</li><li>MySQL</li><li>Blade</li><li>Tailwind CSS</li></ul>
-            <p class="project__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/School_Management_system_Laravel" rel="noopener">View code on GitHub</a></p>
+            <p class="project__links">
+              <button type="button" class="btn btn--primary" data-case="school">Case study</button>
+              <a class="btn btn--ghost" href="https://github.com/kaif15-14682/School_Management_system_Laravel" rel="noopener">View code on GitHub</a>
+            </p>
           </div>
           <figure class="project__visual">
             <div class="window">
               <div class="window__bar"><span></span><span></span><span></span><em>routes/web.php</em></div>
-<pre class="code"><code><span class="c">// Records, one resource per entity</span>
+<pre class="code" id="routes-code"><code><span class="c">// Records, one resource per entity</span>
 <span class="k">Route</span>::<span class="f">resource</span>(<span class="s">'classes'</span>, …);
 <span class="k">Route</span>::<span class="f">resource</span>(<span class="s">'subject'</span>, …);
 <span class="k">Route</span>::<span class="f">resource</span>(<span class="s">'teacher'</span>, …);
@@ -128,8 +229,10 @@
 <span class="c">// Access control</span>
 <span class="k">Route</span>::<span class="f">get</span>(<span class="s">'/roles-permissions'</span>, …);
 <span class="k">Route</span>::<span class="f">resource</span>(<span class="s">'assignrole'</span>, …);</code></pre>
+              <div class="window__bar window__bar--sub"><em>request log · sample traffic</em></div>
+              <ol class="log" id="req-log" aria-label="Sample requests to the routes above"></ol>
             </div>
-            <figcaption>Excerpt of the app's routes. Controllers omitted.</figcaption>
+            <figcaption>Excerpt of the app's routes. The request log is sample traffic: each request lights up the route that handles it.</figcaption>
           </figure>
         </article>
 
@@ -145,19 +248,12 @@
               <li>Automated operational workflows so routine steps run on their own.</li>
             </ul>
             <ul class="stack"><li>Retool</li><li>SQL</li></ul>
+            <p class="project__links"><button type="button" class="btn btn--primary" data-case="retool">Case study</button></p>
             <p class="project__note">Internal work, so the code isn't public.</p>
           </div>
           <figure class="project__visual">
-            <ol class="flow" aria-label="How the dashboards work">
-              <li class="flow__node"><strong>SQL database</strong><span>Operational records</span></li>
-              <li class="flow__node"><strong>Queries</strong><span>Filters, joins and totals</span></li>
-              <li class="flow__node flow__node--main"><strong>Retool apps</strong><span>Tables, charts, forms</span></li>
-              <li class="flow__split">
-                <div class="flow__node"><strong>Live dashboards</strong><span>Reporting at a glance</span></div>
-                <div class="flow__node"><strong>Automated workflows</strong><span>Task tracking and updates</span></div>
-              </li>
-            </ol>
-            <figcaption>How data moves from the database to the team.</figcaption>
+            <div class="flow-diagram"><svg id="flow-svg" viewBox="0 0 540 340" role="img" aria-label="Data flows from the SQL database through queries into Retool apps, then into live dashboards and automated workflows."></svg></div>
+            <figcaption>How data moves from the database to the team. Packets and numbers are illustrative.</figcaption>
           </figure>
         </article>
 
@@ -173,6 +269,7 @@
               <li>Beat five pretrained models and checked it with 5-fold cross-validation (97.28% to 98.37%).</li>
             </ul>
             <ul class="stack"><li>Python</li><li>TensorFlow</li><li>Keras</li><li>OpenCV</li><li>Google Colab</li></ul>
+            <p class="project__links"><button type="button" class="btn btn--primary" data-case="prostadenet">Case study</button></p>
             <p class="project__note">Supervised by Ms. Nazmun Nessa Moon. Full report available on request.</p>
           </div>
           <figure class="project__visual">
@@ -230,37 +327,41 @@
               <li><a href="https://github.com/kaif15-14682/Combined_App_Flutter" rel="noopener">Combined app</a>: login, profile, blog editor, calculator and quiz in one.</li>
             </ul>
             <ul class="stack"><li>Flutter</li><li>Dart</li><li>REST APIs</li></ul>
+            <p class="project__links"><button type="button" class="btn btn--primary" data-case="flutter">Case study</button></p>
           </div>
           <figure class="project__visual">
-            <div class="phones" aria-hidden="true">
+            <div class="phones" id="phones" aria-hidden="true">
               <div class="phone">
                 <div class="phone__screen weather">
+                  <i class="haze haze--a"></i><i class="haze haze--b"></i>
                   <p class="weather__city">Dhaka</p>
-                  <p class="weather__temp">31°</p>
-                  <p class="weather__desc">Haze</p>
-                  <div class="weather__row"><span>Humidity<b>74%</b></span><span>Wind<b>3 m/s</b></span></div>
+                  <p class="weather__temp" id="w-temp">31°</p>
+                  <p class="weather__desc" id="w-desc">Hazy sun</p>
+                  <div class="weather__hours" id="w-hours"></div>
                 </div>
               </div>
               <div class="phone phone--front">
                 <div class="phone__screen quiz">
-                  <p class="quiz__top"><span>Question 3 of 10</span><span>Score 2</span></p>
-                  <div class="quiz__timer"><i></i></div>
-                  <p class="quiz__q">Which data structure uses first in, first out?</p>
-                  <span class="quiz__opt">Stack</span>
-                  <span class="quiz__opt is-right">Queue</span>
-                  <span class="quiz__opt">Tree</span>
-                  <span class="quiz__opt">Graph</span>
+                  <p class="quiz__top"><span id="q-num">Question 3 of 10</span><span>Score <b id="q-score">2</b></span></p>
+                  <div class="quiz__timer"><i id="q-timer"></i></div>
+                  <div class="quiz__body" id="q-body">
+                    <p class="quiz__q">Which data structure uses first in, first out?</p>
+                    <span class="quiz__opt">Stack</span>
+                    <span class="quiz__opt is-right">Queue</span>
+                    <span class="quiz__opt">Tree</span>
+                    <span class="quiz__opt">Graph</span>
+                  </div>
                 </div>
               </div>
               <div class="phone">
                 <div class="phone__screen calc">
-                  <p class="calc__expr">128 × 4</p>
-                  <p class="calc__out">512</p>
-                  <div class="calc__keys"><i>7</i><i>8</i><i>9</i><i class="op">÷</i><i>4</i><i>5</i><i>6</i><i class="op">×</i><i>1</i><i>2</i><i>3</i><i class="op">−</i><i>0</i><i>.</i><i class="op">=</i><i class="op">+</i></div>
+                  <p class="calc__expr" id="k-expr">128 × 4 =</p>
+                  <p class="calc__out" id="k-out">512</p>
+                  <div class="calc__keys" id="k-keys"><i>7</i><i>8</i><i>9</i><i class="op">÷</i><i>4</i><i>5</i><i>6</i><i class="op">×</i><i>1</i><i>2</i><i>3</i><i class="op">−</i><i>C</i><i>0</i><i class="op">=</i><i class="op">+</i></div>
                 </div>
               </div>
             </div>
-            <figcaption>Illustrated screens of the weather, quiz and calculator apps.</figcaption>
+            <figcaption>Illustrated screens of the weather, quiz and calculator apps, playing short sample loops.</figcaption>
           </figure>
         </article>
 
@@ -276,7 +377,10 @@
               <li>Found the class imbalance that makes accuracy misleading here, and planned resampling as the fix.</li>
             </ul>
             <ul class="stack"><li>Python</li><li>pandas</li><li>scikit-learn</li><li>Jupyter</li></ul>
-            <p class="project__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" rel="noopener">View code on GitHub</a></p>
+            <p class="project__links">
+              <button type="button" class="btn btn--primary" data-case="stroke">Case study</button>
+              <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" rel="noopener">View code on GitHub</a>
+            </p>
           </div>
           <figure class="project__visual">
             <ul class="bars bars--stroke" aria-label="Test accuracy by classifier">
@@ -307,7 +411,10 @@
               <li>Keeps the store in a private folder with owner-only file permissions.</li>
             </ul>
             <ul class="stack"><li>Bash</li><li>OpenSSL</li><li>Linux</li></ul>
-            <p class="project__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a></p>
+            <p class="project__links">
+              <button type="button" class="btn btn--primary" data-case="password">Case study</button>
+              <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a>
+            </p>
           </div>
           <figure class="project__visual">
             <div class="window window--term">
@@ -334,53 +441,157 @@ Password added for github.</code></pre>
         </article>
 
         </div>
-        <div class="deck__controls">
-          <button type="button" class="deck__btn" id="deck-prev" aria-label="Previous project">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
-          </button>
-          <div class="deck__dots" id="deck-dots"></div>
-          <p class="deck__count" id="deck-count" aria-live="polite"></p>
-          <button type="button" class="deck__btn" id="deck-next" aria-label="Next project">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
-          </button>
-        </div>
         </div>
 
         <p class="empty" id="empty" hidden>No projects in this category. <button type="button" class="linkish" data-filter="all">Show all projects</button></p>
       </section>
 
-      <!-- Skills matrix -->
+      <!-- How they work: three scroll stories -->
+      <section id="how" class="block" aria-labelledby="how-title">
+        <div class="block__head">
+          <h2 id="how-title">How they work</h2>
+          <p>Three projects taken apart. Scroll through each one.</p>
+        </div>
+
+        <article class="deep" id="deep-school" aria-labelledby="deep-school-title">
+          <div class="deep__head">
+            <p class="kicker">School management system</p>
+            <h3 id="deep-school-title">From the screen down to the database</h3>
+            <p>The attendance screen lifts apart into the layers behind it, then a request travels down to MySQL and back. Names on the screen are sample data.</p>
+          </div>
+          <div class="stage xs bleed" id="xs">
+            <div class="stage__inner xs__grid">
+              <div class="xs__view"><div class="xs__tilt" id="xs-tilt"><div class="xs__scene" id="xs-scene">
+                <div class="xs__layer" style="--i: 0">
+                  <div class="xs__tables">
+                    <span>classes<i></i><i></i><i></i></span><span>students<i></i><i></i><i></i></span><span>attendance<i></i><i></i><i></i></span>
+                    <span>grades<i></i><i></i><i></i></span><span>roles<i></i><i></i><i></i></span><span>permissions<i></i><i></i><i></i></span>
+                  </div>
+                  <span class="xs__name">MYSQL</span>
+                </div>
+                <div class="xs__layer" style="--i: 1">
+                  <div class="xs__boxes">
+                    <span>AttendanceController<small>store(), create()</small></span><span>Student<small>belongsTo ClassRoom</small></span>
+                    <span>ClassRoom<small>hasMany Student</small></span><span>Attendance<small>belongsTo Student</small></span>
+                  </div>
+                  <span class="xs__name">CONTROLLERS · MODELS</span>
+                </div>
+                <div class="xs__layer" style="--i: 2">
+                  <span class="xs__pill"><b>GET</b>attendance-create/{classid}</span>
+                  <span class="xs__pill"><b class="post">POST</b>attendance</span>
+                  <span class="xs__pill"><b class="post">POST</b>assign-subject-to-class/{id}</span>
+                  <span class="xs__pill xs__pill--lock">role and permission check</span>
+                  <span class="xs__name">ROUTES · PERMISSIONS</span>
+                </div>
+                <div class="xs__layer" style="--i: 3">
+                  <p class="xs__t">Attendance · Class 7 <span class="xs__btn">Save</span></p>
+                  <div class="xs__row"><span>Ayesha Rahman</span><em>Present</em></div>
+                  <div class="xs__row"><span>Tanvir Hasan</span><em>Present</em></div>
+                  <div class="xs__row"><span>Nusrat Jahan</span><em class="no">Absent</em></div>
+                  <div class="xs__row"><span>Rafiul Islam</span><em>Present</em></div>
+                  <div class="xs__row"><span>Sadia Akter</span><em>Present</em></div>
+                  <span class="xs__name">BLADE · TAILWIND</span>
+                </div>
+                <i class="xs__packet" id="xs-packet" aria-hidden="true"></i>
+              </div></div></div>
+              <ol class="steps" id="xs-legend">
+                <li><b>Screen</b><span>Blade views styled with Tailwind</span></li>
+                <li><b>Routes and permissions</b><span>Every page checks the user's role</span></li>
+                <li><b>Controllers and models</b><span>Eloquent relations between records</span></li>
+                <li><b>MySQL</b><span>Classes, students, attendance, grades</span></li>
+              </ol>
+            </div>
+          </div>
+        </article>
+
+        <article class="deep" id="deep-thesis" aria-labelledby="deep-thesis-title">
+          <div class="deep__head">
+            <p class="kicker">ProstadeNet</p>
+            <h3 id="deep-thesis-title">From slide to grade</h3>
+            <p>One tissue tile goes through the cleaning pipeline, the dataset grows with augmentation, and the tuned network lands its accuracy. The tile is drawn in the browser as a stand-in for a real slide.</p>
+          </div>
+          <div class="stage story bleed" id="story">
+            <div class="stage__inner story__grid">
+              <div class="tissue" id="tissue">
+                <div class="tissue__aug" id="aug"></div>
+                <div class="tissue__frame" id="tframe">
+                  <canvas id="t-raw" width="512" height="512" aria-hidden="true"></canvas>
+                  <canvas id="t-clean" width="512" height="512" aria-hidden="true"></canvas>
+                  <span class="tissue__size" id="tsize">512 × 512</span>
+                </div>
+              </div>
+              <div class="story__side">
+                <ol class="steps" id="story-steps">
+                  <li><b>Raw tile</b><span>512 × 512, speckle noise, flat contrast</span></li>
+                  <li><b>Resize</b><span>Down to 224 × 224 for the network</span></li>
+                  <li><b>Median filter</b><span>Removes speckle noise</span></li>
+                  <li><b>CLAHE</b><span>Boosts local contrast</span></li>
+                  <li><b>Augmentation</b><span>Colour, contrast, brightness, sharpness</span></li>
+                  <li><b>Train and tune</b><span>10-step ablation study</span></li>
+                </ol>
+                <div class="stats">
+                  <div><span>Images</span><b id="c-img">53,080</b></div>
+                  <div><span>Test accuracy</span><b id="c-acc">99.83%</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="deep" id="deep-stroke" aria-labelledby="deep-stroke-title">
+          <div class="deep__head">
+            <p class="kicker">Stroke risk prediction</p>
+            <h3 id="deep-stroke-title">Why 94% accuracy wasn't enough</h3>
+            <p>One dot per patient in the test set. They regroup as you scroll to show why the accuracy figure misleads.</p>
+          </div>
+          <div class="stage dots bleed" id="dots-stage">
+            <div class="stage__inner dots__grid">
+              <div class="dots__canvas"><canvas id="dots" role="img" aria-label="1,278 dots, one per patient in the test set: 1,204 without stroke and 74 with stroke. Predicting no stroke for everyone is 94.2% accurate but catches none of the 74."></canvas></div>
+              <div class="story__side">
+                <ol class="steps" id="dots-steps">
+                  <li><b>1,278 patients</b><span>Each dot is one person in the test set</span></li>
+                  <li><b>74 had a stroke</b><span>Only 5.8% of the set</span></li>
+                  <li><b>Split by outcome</b><span>1,204 without, 74 with</span></li>
+                  <li><b>Say "no stroke" to everyone</b><span>94.2% accurate, yet every stroke is missed</span></li>
+                  <li><b>Planned fix: resampling</b><span>Balance the classes in the training data</span></li>
+                </ol>
+                <div class="stats">
+                  <div><span>Accuracy</span><b id="d-acc">94.2%</b></div>
+                  <div><span>Strokes caught</span><b id="d-rec" class="is-bad">0 of 74</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Skills map -->
       <section id="skills" class="block" aria-labelledby="skills-title">
         <div class="block__head">
           <h2 id="skills-title">Skills, and where I used them</h2>
-          <p>Every skill below maps to a project on this page.</p>
+          <p>Every skill below maps to a project on this page. Hover or focus one to see its connections.</p>
         </div>
-        <div class="matrix-wrap" tabindex="0" aria-label="Skills by project, scrolls sideways on small screens">
-          <table class="matrix">
+        <div class="skills-map"><svg id="skills-svg" class="skills-svg" viewBox="0 0 720 470" aria-hidden="true"></svg></div>
+        <!-- The same data as a table, for screen readers -->
+        <div class="sr-only">
+          <table>
+            <caption>Skills by project</caption>
             <thead>
-              <tr>
-                <th scope="col">Skill</th>
-                <th scope="col"><a href="#p-school">School system</a></th>
-                <th scope="col"><a href="#p-retool">Dashboards</a></th>
-                <th scope="col"><a href="#p-prostadenet">ProstadeNet</a></th>
-                <th scope="col"><a href="#p-flutter">Flutter apps</a></th>
-                <th scope="col"><a href="#p-stroke">Stroke ML</a></th>
-                <th scope="col"><a href="#p-password">Password CLI</a></th>
-              </tr>
+              <tr><th scope="col">Skill</th><th scope="col">Projects</th></tr>
             </thead>
             <tbody>
-              <tr><th scope="row">SQL &amp; MySQL</th><td class="y">Used</td><td class="y">Used</td><td></td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">PHP &amp; Laravel</th><td class="y">Used</td><td></td><td></td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">Retool</th><td></td><td class="y">Used</td><td></td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">HTML, CSS &amp; Tailwind</th><td class="y">Used</td><td></td><td></td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">Python</th><td></td><td></td><td class="y">Used</td><td></td><td class="y">Used</td><td></td></tr>
-              <tr><th scope="row">TensorFlow &amp; Keras</th><td></td><td></td><td class="y">Used</td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">OpenCV</th><td></td><td></td><td class="y">Used</td><td></td><td></td><td></td></tr>
-              <tr><th scope="row">scikit-learn &amp; pandas</th><td></td><td></td><td></td><td></td><td class="y">Used</td><td></td></tr>
-              <tr><th scope="row">Flutter &amp; Dart</th><td></td><td></td><td></td><td class="y">Used</td><td></td><td></td></tr>
-              <tr><th scope="row">REST APIs</th><td></td><td></td><td></td><td class="y">Used</td><td></td><td></td></tr>
-              <tr><th scope="row">Bash &amp; Linux</th><td></td><td></td><td></td><td></td><td></td><td class="y">Used</td></tr>
-              <tr><th scope="row">Git &amp; GitHub</th><td class="y">Used</td><td></td><td></td><td class="y">Used</td><td class="y">Used</td><td class="y">Used</td></tr>
+              <tr><th scope="row">SQL &amp; MySQL</th><td>School system, Dashboards</td></tr>
+              <tr><th scope="row">PHP &amp; Laravel</th><td>School system</td></tr>
+              <tr><th scope="row">Retool</th><td>Dashboards</td></tr>
+              <tr><th scope="row">HTML, CSS &amp; Tailwind</th><td>School system</td></tr>
+              <tr><th scope="row">Python</th><td>ProstadeNet, Stroke ML</td></tr>
+              <tr><th scope="row">TensorFlow &amp; Keras</th><td>ProstadeNet</td></tr>
+              <tr><th scope="row">OpenCV</th><td>ProstadeNet</td></tr>
+              <tr><th scope="row">scikit-learn &amp; pandas</th><td>Stroke ML</td></tr>
+              <tr><th scope="row">Flutter &amp; Dart</th><td>Flutter apps</td></tr>
+              <tr><th scope="row">REST APIs</th><td>Flutter apps</td></tr>
+              <tr><th scope="row">Bash &amp; Linux</th><td>Password CLI</td></tr>
+              <tr><th scope="row">Git &amp; GitHub</th><td>School system, Flutter apps, Stroke ML, Password CLI</td></tr>
             </tbody>
           </table>
         </div>
@@ -392,44 +603,47 @@ Password added for github.</code></pre>
         <div class="block__head">
           <h2 id="experience-title">Experience</h2>
         </div>
-        <ol class="timeline">
-          <li>
-            <p class="timeline__when">May 2026</p>
-            <h3>Workflow Automation &amp; Dashboard Development</h3>
-            <p class="timeline__where">Retool and SQL</p>
-            <ul>
-              <li>Built and deployed interactive dashboards and automated operational workflows.</li>
-              <li>Made data visualisation and process tracking simpler for reporting and task management.</li>
-            </ul>
-          </li>
-          <li>
-            <p class="timeline__when">2024 – 2025</p>
-            <h3>Undergraduate Researcher</h3>
-            <p class="timeline__where">Daffodil International University</p>
-            <ul>
-              <li>Designed and tuned ProstadeNet, a CNN for six-grade prostate cancer classification.</li>
-              <li>Benchmarked it against VGG16, VGG19, MobileNet, MobileNetV2 and InceptionV3.</li>
-            </ul>
-          </li>
-          <li>
-            <p class="timeline__when">Apr – Jun 2024</p>
-            <h3>Sales Development Representative</h3>
-            <p class="timeline__where">Santuary Limited</p>
-            <ul>
-              <li>Made high-volume outbound calls and handled client conversations professionally.</li>
-              <li>Identified customer needs through clear, persuasive dialogue.</li>
-              <li>Met outreach targets consistently in a fast-paced, feedback-driven team.</li>
-            </ul>
-          </li>
-          <li>
-            <p class="timeline__when">2019 – 2025</p>
-            <h3>Private Tutor</h3>
-            <p class="timeline__where">Caretutors</p>
-            <ul>
-              <li>Taught students one to one and explained complex technical concepts clearly.</li>
-            </ul>
-          </li>
-        </ol>
+        <div class="tl" id="tl">
+          <div class="tl__year" aria-hidden="true"><span id="tl-year">2026</span><small id="tl-label">Workflow automation in Retool</small></div>
+          <ol class="timeline">
+            <li>
+              <p class="timeline__when">May 2026</p>
+              <h3>Workflow Automation &amp; Dashboard Development</h3>
+              <p class="timeline__where">Retool and SQL</p>
+              <ul>
+                <li>Built and deployed interactive dashboards and automated operational workflows.</li>
+                <li>Made data visualisation and process tracking simpler for reporting and task management.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">2024 – 2025</p>
+              <h3>Undergraduate Researcher</h3>
+              <p class="timeline__where">Daffodil International University</p>
+              <ul>
+                <li>Designed and tuned ProstadeNet, a CNN for six-grade prostate cancer classification.</li>
+                <li>Benchmarked it against VGG16, VGG19, MobileNet, MobileNetV2 and InceptionV3.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">Apr – Jun 2024</p>
+              <h3>Sales Development Representative</h3>
+              <p class="timeline__where">Santuary Limited</p>
+              <ul>
+                <li>Made high-volume outbound calls and handled client conversations professionally.</li>
+                <li>Identified customer needs through clear, persuasive dialogue.</li>
+                <li>Met outreach targets consistently in a fast-paced, feedback-driven team.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">2019 – 2025</p>
+              <h3>Private Tutor</h3>
+              <p class="timeline__where">Caretutors</p>
+              <ul>
+                <li>Taught students one to one and explained complex technical concepts clearly.</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
       </section>
 
       <!-- Education -->
@@ -474,6 +688,142 @@ Password added for github.</code></pre>
     </main>
   </div>
 
+  <!-- Case studies. Each one waits here and moves into the dialog when its project is opened. -->
+  <div class="case-store" hidden>
+    <div class="case-content" data-case="school">
+      <p class="project__meta"><span class="tag">Web &amp; backend</span>2024</p>
+      <h3 class="case__title">School management system</h3>
+      <p>A Laravel web app that runs a school's day-to-day records: classes, subjects, teachers, students and parents, with attendance and grades on top. Every page sits behind role-based permissions that admins manage from inside the app.</p>
+      <h4>Query the database</h4>
+      <p class="case__hint">Pick a query to run it against sample data shaped like the app's tables.</p>
+      <div class="qc" id="qc">
+        <div class="window">
+          <div class="window__bar"><span></span><span></span><span></span><em>school_db · MySQL · sample data</em></div>
+          <div class="qc__tabs" id="qc-tabs"></div>
+          <pre class="qc__sql" id="qc-sql"></pre>
+          <div class="qc__run"><button type="button" id="qc-run">Run query</button><span class="qc__status" id="qc-status" aria-live="polite">Ready</span></div>
+        </div>
+        <div class="qc__right">
+          <p class="qc__title" id="qc-title"></p>
+          <div class="qc__chart" id="qc-chart" aria-hidden="true"></div>
+          <table class="qc__table"><thead id="qc-head"></thead><tbody id="qc-rows"></tbody></table>
+        </div>
+      </div>
+      <p class="case__links">
+        <a class="btn btn--ghost" href="#deep-school" data-close>See it taken apart, layer by layer</a>
+        <a class="btn btn--ghost" href="https://github.com/kaif15-14682/School_Management_system_Laravel" rel="noopener">View code on GitHub</a>
+      </p>
+    </div>
+
+    <div class="case-content" data-case="retool">
+      <p class="project__meta"><span class="tag">Data</span>2026</p>
+      <h3 class="case__title">Operations dashboards in Retool</h3>
+      <p>Interactive dashboards and automated workflows built on SQL, so a team can see its numbers at a glance and routine steps run on their own. The work is internal, so the dashboard below is a sample built to show the idea.</p>
+      <h4>Look behind the screen</h4>
+      <p class="case__hint">Move the lens over the dashboard to see the query behind each widget. Click or press Enter to reveal all of it.</p>
+      <div class="xray" id="xray" tabindex="0" role="group" aria-label="Sample operations dashboard with an X-ray lens. Press Enter to reveal the queries behind every widget.">
+        <div class="xr-grid">
+          <div class="xr-h xr-head"><b>Operations</b><span>This week</span><em>All teams</em></div>
+          <div class="xr-k1 xr-card xr-kpi"><span>Open tasks</span><b>128</b><small>−12 since Monday</small></div>
+          <div class="xr-k2 xr-card xr-kpi"><span>Reports sent</span><b>42</b><small>+6 this week</small></div>
+          <div class="xr-k3 xr-card xr-kpi"><span>Avg. time to resolve</span><b>3.4 h</b><small>−0.6 h</small></div>
+          <div class="xr-c xr-card"><span class="xr-cap">Tasks created per day</span>
+            <div class="xr-bars"><i style="height: 48%"></i><i style="height: 72%"></i><i style="height: 60%"></i><i style="height: 88%"></i><i style="height: 66%"></i><i style="height: 34%"></i><i style="height: 22%"></i></div>
+            <div class="xr-days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          </div>
+          <div class="xr-t xr-card"><span class="xr-cap">Late reports</span>
+            <ul class="xr-list"><li>Weekly stock count<em>2 days late</em></li><li>Vendor invoices<em>1 day late</em></li><li>Shift handover log<em>1 day late</em></li></ul>
+          </div>
+        </div>
+        <div class="xr-grid xray__sys" id="xray-sys" aria-hidden="true">
+          <div class="xr-h xr-code">// ops_dashboard · resource: ops_db (SQL) · sample queries</div>
+          <div class="xr-k1 xr-code"><span class="k">SELECT</span> <span class="f">COUNT</span>(*)
+<span class="k">FROM</span> tasks
+<span class="k">WHERE</span> status = <span class="s">'open'</span>;<span class="bind">→ {{ openTasks.data }}</span></div>
+          <div class="xr-k2 xr-code"><span class="k">SELECT</span> <span class="f">COUNT</span>(*)
+<span class="k">FROM</span> reports
+<span class="k">WHERE</span> sent_at >= <span class="f">CURDATE</span>()
+  - <span class="k">INTERVAL</span> <span class="s">7</span> <span class="k">DAY</span>;<span class="bind">→ {{ sentReports.data }}</span></div>
+          <div class="xr-k3 xr-code"><span class="k">SELECT</span> <span class="f">AVG</span>(<span class="f">TIMESTAMPDIFF</span>(
+  <span class="k">MINUTE</span>, created_at, resolved_at)) / <span class="s">60</span>
+<span class="k">FROM</span> tasks <span class="k">WHERE</span> resolved_at <span class="k">IS NOT NULL</span>;</div>
+          <div class="xr-c xr-code"><span class="k">SELECT</span> <span class="f">DATE</span>(created_at) <span class="k">AS</span> day,
+       <span class="f">COUNT</span>(*) <span class="k">AS</span> created
+<span class="k">FROM</span> tasks
+<span class="k">WHERE</span> created_at >= <span class="f">CURDATE</span>() - <span class="k">INTERVAL</span> <span class="s">7</span> <span class="k">DAY</span>
+<span class="k">GROUP BY</span> day <span class="k">ORDER BY</span> day;<span class="bind">→ chart1.data = {{ dailyTasks.data }}
+→ refreshes every 5 minutes</span><span class="xr-ghost" aria-hidden="true"><i style="height: 48%"></i><i style="height: 72%"></i><i style="height: 60%"></i><i style="height: 88%"></i><i style="height: 66%"></i><i style="height: 34%"></i><i style="height: 22%"></i></span></div>
+          <div class="xr-t xr-code"><span class="k">SELECT</span> r.title, r.due_at
+<span class="k">FROM</span> reports r
+<span class="k">WHERE</span> r.due_at &lt; <span class="f">NOW</span>()
+  <span class="k">AND</span> r.sent_at <span class="k">IS NULL</span>
+<span class="k">ORDER BY</span> r.due_at;<span class="bind">→ workflow: remind owner</span></div>
+        </div>
+        <i class="xray__ring" id="xray-ring" aria-hidden="true"></i>
+      </div>
+      <ul class="did case__did">
+        <li>Used SQL to pull and shape the data behind each dashboard.</li>
+        <li>Built and deployed the Retool apps used for reporting and task management.</li>
+        <li>Automated operational workflows so routine steps run on their own.</li>
+      </ul>
+    </div>
+
+    <div class="case-content" data-case="prostadenet">
+      <p class="project__meta"><span class="tag">Machine learning</span>2024 – 2025</p>
+      <h3 class="case__title">ProstadeNet: prostate cancer grading</h3>
+      <p>My bachelor's thesis: a CNN that sorts tissue images into the six ISUP cancer grades. I cleaned 10,616 images and grew the set to 53,080 with augmentation, tuned the network through a 10-step ablation study from 96.07% to 99.83% test accuracy, and checked it with 5-fold cross-validation.</p>
+      <h4>Watch it run</h4>
+      <p class="case__hint">A tile passes through the network, each layer's feature maps light up, and the six grade scores settle on a prediction.</p>
+      <div class="cnn-scroll"><div class="cnn" id="cnn" aria-label="Simplified diagram of ProstadeNet: input tile, convolution and pooling layers, a dense layer, and a softmax over six grades."></div></div>
+      <div class="cnn-out">
+        <div><p class="kicker">Softmax · six ISUP grades</p><ol class="grades" id="grades"></ol></div>
+        <p class="pred" id="pred">Predicted: grade 3<small>Illustrative scores, not real model output</small></p>
+      </div>
+      <p class="case__note">Simplified diagram. The feature maps are real convolutions (edge, blur and sharpen filters) computed in the browser on a drawn sample tile, not the thesis data.</p>
+      <p class="case__links"><a class="btn btn--ghost" href="#deep-thesis" data-close>Follow one tile through the pipeline</a></p>
+    </div>
+
+    <div class="case-content" data-case="flutter">
+      <p class="project__meta"><span class="tag">Mobile</span>2024</p>
+      <h3 class="case__title">Flutter apps</h3>
+      <p>Four cross-platform apps written in Dart, each on GitHub. They cover REST API calls, timed state, saved scores and multi-screen navigation.</p>
+      <ul class="case__apps">
+        <li><a href="https://github.com/kaif15-14682/Weather_App_Flutter" rel="noopener"><b>Weather</b></a><span>Live conditions from the OpenWeatherMap API.</span></li>
+        <li><a href="https://github.com/kaif15-14682/Quiz_App_flutter" rel="noopener"><b>Quiz</b></a><span>Timed questions, a running score and a saved high score.</span></li>
+        <li><a href="https://github.com/kaif15-14682/Calculator_App_flutter" rel="noopener"><b>Calculator</b></a><span>A basic arithmetic calculator.</span></li>
+        <li><a href="https://github.com/kaif15-14682/Combined_App_Flutter" rel="noopener"><b>Combined app</b></a><span>Login, profile, blog editor, calculator and quiz in one app.</span></li>
+      </ul>
+    </div>
+
+    <div class="case-content" data-case="stroke">
+      <p class="project__meta"><span class="tag">Machine learning</span>2023</p>
+      <h3 class="case__title">Stroke risk prediction</h3>
+      <p>A Jupyter notebook that predicts stroke from 5,110 patient records. I explored and scaled the data, picked features with SelectKBest, and compared KNN, a decision tree, a random forest, SVM and logistic regression. The best reached 94.2% accuracy, but only 74 of the 1,278 test patients had a stroke, so accuracy hides how few strokes the models catch. Resampling is the planned fix.</p>
+      <p class="case__links">
+        <a class="btn btn--ghost" href="#deep-stroke" data-close>See why accuracy misleads, one dot per patient</a>
+        <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" rel="noopener">View code on GitHub</a>
+      </p>
+    </div>
+
+    <div class="case-content" data-case="password">
+      <p class="project__meta"><span class="tag">Tools</span>2023</p>
+      <h3 class="case__title">Command-line password manager</h3>
+      <p>A Bash script that stores passwords encrypted with AES-256 through OpenSSL and puts a passcode in front of every lookup. One menu covers add, retrieve, list, update, delete and search, and the store lives in a private folder with owner-only permissions.</p>
+      <p class="case__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a></p>
+    </div>
+  </div>
+
+  <div class="case-backdrop" id="case-backdrop" hidden></div>
+  <div class="case" id="case" role="dialog" aria-modal="true" aria-labelledby="case-label" hidden>
+    <button type="button" class="case__close" id="case-close">Close</button>
+    <p class="sr-only" id="case-label">Case study</p>
+    <div class="case__body" id="case-body"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="showpieces.js" defer></script>
 </body>
 </html>

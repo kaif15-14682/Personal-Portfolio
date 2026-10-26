@@ -135,9 +135,14 @@ function activateTab(tab, focus = false) {
     t.setAttribute("aria-selected", String(on));
     t.tabIndex = on ? 0 : -1;
     const pane = document.getElementById(t.getAttribute("aria-controls"));
+    const opening = on && pane.hidden;
     pane.hidden = !on;
     // Hidden panes still take up space, so their bars wait for the tab to open before growing.
-    if (on && !reduceMotion) pane.querySelectorAll(".bars:not(.play)").forEach((b) => b.classList.add("play"));
+    if (on && !reduceMotion) pane.querySelectorAll(".bars:not(.play), .pipeline:not(.play), .growth:not(.play)").forEach((b) => b.classList.add("play"));
+    // The new pane fades up into place instead of swapping in.
+    if (opening && !reduceMotion && pane.animate) {
+      pane.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: "cubic-bezier(.23, 1, .32, 1)" });
+    }
   });
   if (focus) tab.focus();
 }
@@ -151,108 +156,10 @@ tabs.forEach((tab, i) => {
   });
 });
 
-/* ---------- Project carousel ---------- */
-
-const projects = [...document.querySelectorAll(".project")];
-const track = document.getElementById("deck-track");
-const deckControls = document.querySelector(".deck__controls");
-const deckPrev = document.getElementById("deck-prev");
-const deckNext = document.getElementById("deck-next");
-const deckDots = document.getElementById("deck-dots");
-const deckCount = document.getElementById("deck-count");
-let slides = projects;
-let active = 0;
-
-// Offset of each card from the centre of the track, in card widths.
-// CSS turns that into the 3D tilt, scale and fade.
-function paintDeck() {
-  const mid = track.scrollLeft + track.clientWidth / 2;
-  let nearest = 0;
-  let best = Infinity;
-  slides.forEach((s, i) => {
-    const o = (s.offsetLeft + s.offsetWidth / 2 - mid) / s.offsetWidth;
-    s.style.setProperty("--o", Math.max(-1.5, Math.min(1.5, o)).toFixed(3));
-    s.style.setProperty("--a", Math.min(1, Math.abs(o)).toFixed(3));
-    if (Math.abs(o) < best) { best = Math.abs(o); nearest = i; }
-  });
-  if (nearest !== active || !slides[active].classList.contains("is-active")) setActive(nearest);
-}
-
-function setActive(i) {
-  active = i;
-  projects.forEach((p) => p.classList.toggle("is-active", p === slides[i]));
-  deckDots.querySelectorAll("button").forEach((d, j) => d.setAttribute("aria-current", String(j === i)));
-  deckDots.style.setProperty("--i", i);
-  deckCount.textContent = `${i + 1} / ${slides.length}`;
-  deckPrev.disabled = i === 0;
-  deckNext.disabled = i === slides.length - 1;
-}
-
-function goTo(i, instant = false) {
-  const s = slides[Math.max(0, Math.min(slides.length - 1, i))];
-  if (!s) return;
-  track.scrollTo({
-    left: s.offsetLeft - (track.clientWidth - s.offsetWidth) / 2,
-    behavior: instant || reduceMotion ? "auto" : "smooth",
-  });
-}
-
-function resetDeck() {
-  slides = projects.filter((p) => !p.hidden);
-  deckDots.textContent = "";
-  slides.forEach((s, i) => {
-    const dot = document.createElement("button");
-    dot.type = "button";
-    dot.setAttribute("aria-label", `Project ${i + 1}: ${s.querySelector("h3").textContent}`);
-    dot.addEventListener("click", () => goTo(i));
-    deckDots.append(dot);
-  });
-  const pill = document.createElement("span");
-  pill.className = "deck__pill";
-  pill.setAttribute("aria-hidden", "true");
-  deckDots.append(pill);
-  deckControls.hidden = slides.length < 2;
-  if (!slides.length) return;
-  active = 0;
-  goTo(0, true);
-  setActive(0);
-  paintDeck();
-}
-
-if (track) {
-  let frame = 0;
-  const schedule = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; if (slides.length) paintDeck(); }); };
-  track.addEventListener("scroll", schedule, { passive: true });
-  window.addEventListener("resize", schedule);
-
-  deckPrev.addEventListener("click", () => goTo(active - 1));
-  deckNext.addEventListener("click", () => goTo(active + 1));
-  track.addEventListener("keydown", (e) => {
-    if (e.target !== track) return;
-    const keys = { ArrowLeft: active - 1, ArrowRight: active + 1, Home: 0, End: slides.length - 1 };
-    if (!(e.key in keys)) return;
-    e.preventDefault();
-    goTo(keys[e.key]);
-  });
-
-  // A card turned to the side is brought to the front first instead of following its links.
-  track.addEventListener("click", (e) => {
-    const card = e.target.closest(".project");
-    if (!card || card.classList.contains("is-active")) return;
-    e.preventDefault();
-    e.stopPropagation();
-    goTo(slides.indexOf(card));
-  }, true);
-  track.addEventListener("focusin", (e) => {
-    const card = e.target.closest(".project");
-    if (card && !card.classList.contains("is-active")) goTo(slides.indexOf(card));
-  });
-
-  resetDeck();
-}
-
 /* ---------- Project filters ---------- */
 
+const projects = [...document.querySelectorAll(".project")];
+const track = document.getElementById("strip-track");
 const filterButtons = [...document.querySelectorAll(".filters button")];
 const empty = document.getElementById("empty");
 function setFilter(filter) {
@@ -264,46 +171,42 @@ function setFilter(filter) {
   });
   filterButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
   empty.hidden = shown > 0;
-  if (track) resetDeck();
+  // The sideways strip measures its cards, so it re-measures whenever cards hide or show.
+  if (window.ScrollTrigger) ScrollTrigger.refresh();
 }
 
-// The carousel fades down, switches, then rises back in, instead of jumping.
+// The cards fade down, switch, then rise back in, instead of jumping.
 let filterOut = null;
 function applyFilter(filter) {
   if (reduceMotion || !track || !track.animate) { setFilter(filter); return; }
   if (filterOut) filterOut.cancel();
-  filterOut = track.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(8px)" }], { duration: 150, easing: "ease-in", fill: "forwards" });
+  filterOut = track.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(8px)" }], { duration: 150, easing: "cubic-bezier(.23, 1, .32, 1)", fill: "forwards" });
   filterOut.onfinish = () => {
     setFilter(filter);
-    track.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(.2, .7, .2, 1)" });
+    track.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: "cubic-bezier(.23, 1, .32, 1)" });
     filterOut.cancel();
     filterOut = null;
   };
 }
 document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => applyFilter(b.dataset.filter)));
 
-// Matrix header links jump to a project; make sure it isn't filtered out, then turn the carousel to it.
-document.querySelectorAll('.matrix thead a').forEach((a) => {
-  a.addEventListener("click", (e) => {
-    const target = document.querySelector(a.getAttribute("href"));
-    if (!target || !track) return;
-    e.preventDefault();
-    if (target.hidden) setFilter("all");
-    document.getElementById("projects").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
-    goTo(slides.indexOf(target));
-  });
-});
-
 /* ---------- Sidebar: highlight the section in view ---------- */
 
 const navLinks = [...document.querySelectorAll(".topnav a")];
+// Contact is too short to ever reach the band below, so the very bottom of the page counts as Contact.
+let spied = "", atEnd = false;
+const markNav = () => {
+  const id = atEnd ? "contact" : spied;
+  navLinks.forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${id}`));
+};
 if ("IntersectionObserver" in window && navLinks.length) {
   const sections = navLinks.map((a) => document.querySelector(a.getAttribute("href")));
   const spy = new IntersectionObserver(
     (entries) => {
       entries.forEach((e) => {
         if (!e.isIntersecting) return;
-        navLinks.forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${e.target.id}`));
+        spied = e.target.id;
+        markNav();
       });
     },
     { rootMargin: "-35% 0px -60% 0px" }
@@ -366,10 +269,9 @@ if (year) year.textContent = new Date().getFullYear();
 const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
 // Headline rise: wrap each word so CSS can slide it up from behind a mask.
-const headline = document.getElementById("about-title");
-if (headline && !reduceMotion) {
-  const words = headline.textContent.trim().split(/\s+/);
-  headline.textContent = "";
+const splitWords = (el) => {
+  const words = el.textContent.trim().split(/\s+/);
+  el.textContent = "";
   words.forEach((word, i) => {
     const mask = document.createElement("span");
     mask.className = "w";
@@ -377,10 +279,12 @@ if (headline && !reduceMotion) {
     inner.textContent = word;
     inner.style.setProperty("--i", i);
     mask.append(inner);
-    headline.append(mask, i < words.length - 1 ? " " : "");
+    el.append(mask, i < words.length - 1 ? " " : "");
   });
-  headline.classList.add("is-split");
-}
+  el.classList.add("is-split");
+};
+const headline = document.getElementById("about-title");
+if (headline && !reduceMotion) splitWords(headline);
 
 // Reveal on scroll. Anything already on screen at load is left alone, so nothing above the fold flickers.
 if (!reduceMotion && "IntersectionObserver" in window) {
@@ -391,10 +295,19 @@ if (!reduceMotion && "IntersectionObserver" in window) {
       revealer.unobserve(e.target);
     });
   }, { rootMargin: "0px 0px -10% 0px" });
-  document.querySelectorAll(".block__head, .filters, .deck, .matrix-wrap, .soft-skills, .timeline > li, .edu__card, .contact").forEach((el) => {
+  const firstTile = document.querySelector(".hl__tile");
+  document.querySelectorAll(".highlights__title, .hl__tile, .block__head, .filters, .deep__head, .skills-map, .soft-skills, .edu__card, .contact").forEach((el) => {
     if (el.getBoundingClientRect().top < window.innerHeight) return;
     // Cards that sit side by side come in one after another.
     if (el.matches(".edu__card")) el.style.setProperty("--i", [...el.parentElement.children].indexOf(el));
+    // Highlight tiles arrive in a short diagonal wave, left to right and top to bottom.
+    if (el.matches(".hl__tile")) {
+      const col = Math.round((el.offsetLeft - firstTile.offsetLeft) / el.offsetWidth);
+      const row = Math.round((el.offsetTop - firstTile.offsetTop) / el.offsetHeight);
+      el.style.setProperty("--i", col + Math.min(row, 1));
+    }
+    // Section titles rise word by word, like the headline, once their block reveals.
+    if (el.matches(".block__head, .contact")) splitWords(el.querySelector("h2"));
     el.classList.add("reveal");
     revealer.observe(el);
   });
@@ -411,8 +324,8 @@ if (finePointer && !reduceMotion) {
     btn.addEventListener("pointerleave", () => { btn.style.translate = ""; });
   });
 
-  // 3D tilt toward the pointer, at most one update per frame. Cards turned away in the carousel stay still.
-  document.querySelectorAll(".project .window, .project .flow, .project .phones").forEach((el) => {
+  // 3D tilt toward the pointer, at most one update per frame.
+  document.querySelectorAll(".project .window, .project .flow-diagram, .project .phones").forEach((el) => {
     el.classList.add("tilt", "tilt-glare");
     let px = 0, py = 0, frame = 0;
     const paint = () => {
@@ -425,8 +338,6 @@ if (finePointer && !reduceMotion) {
       el.style.setProperty("--gy", `${py - r.top}px`);
     };
     el.addEventListener("pointermove", (e) => {
-      const card = el.closest(".project");
-      if (card && !card.classList.contains("is-active")) return;
       px = e.clientX;
       py = e.clientY;
       el.classList.add("is-tilting");
@@ -438,18 +349,16 @@ if (finePointer && !reduceMotion) {
     });
   });
 
-  // Focus brackets, project preview and click ripple share one layer and one rAF loop that stops when everything settles.
+  // Focus brackets and click ripple share one layer and one rAF loop that stops when everything settles.
   const root = document.documentElement;
   const layer = document.createElement("div");
   layer.setAttribute("aria-hidden", "true");
   layer.innerHTML =
     '<span class="cursor__corner"></span><span class="cursor__corner"></span><span class="cursor__corner"></span><span class="cursor__corner"></span>' +
-    '<span class="cursor__dot"></span>' +
-    '<div class="peek"><p class="peek__meta"></p><p class="peek__title"></p><p class="peek__text"></p><p class="peek__stack"></p></div>';
+    '<span class="cursor__dot"></span>';
   document.body.append(layer);
   const corners = [...layer.querySelectorAll(".cursor__corner")].map((el) => ({ el, x: 0, y: 0 }));
   const dot = layer.querySelector(".cursor__dot");
-  const peek = { el: layer.querySelector(".peek"), x: 0, y: 0, on: false };
   const move = (el, x, y) => { el.style.transform = `translate3d(${x}px, ${y}px, 0)`; };
   const approach = (o, tx, ty, k) => {
     o.x += (tx - o.x) * k;
@@ -485,13 +394,6 @@ if (finePointer && !reduceMotion) {
       move(corners[i].el, corners[i].x, corners[i].y);
     });
 
-    if (peek.on) {
-      if (approach(peek, px, py, k(0.18))) busy = true;
-      peek.el.classList.toggle("is-left", px + peek.el.offsetWidth + 40 > window.innerWidth);
-      peek.el.classList.toggle("is-up", py + peek.el.offsetHeight + 40 > window.innerHeight);
-      move(peek.el, peek.x, peek.y);
-    }
-
     snap = false;
     if (busy) frame = requestAnimationFrame(step);
     else last = 0;
@@ -510,32 +412,11 @@ if (finePointer && !reduceMotion) {
 
   // Frame only things small enough to read as one control, not whole cards.
   const FRAMEABLE = "a, button, [role='tab'], [role='button']";
-  const fillPeek = (project) => {
-    const meta = project.querySelector(".project__meta");
-    const year = [...meta.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim();
-    const [m, title, text, stack] = peek.el.children;
-    m.textContent = `${meta.querySelector(".tag").textContent} · ${year}`;
-    title.textContent = project.querySelector("h3").textContent;
-    text.textContent = project.querySelector(".project__info > p:not(.project__meta)").textContent;
-    stack.textContent = [...project.querySelectorAll(".stack li")].map((li) => li.textContent).join(" · ");
-  };
   document.addEventListener("pointerover", (e) => {
     const t = e.target.closest(FRAMEABLE);
     const r = t && t.getBoundingClientRect();
     target = t && r.width < 520 && r.height < 160 ? t : null;
     root.classList.toggle("cursor-hover", !!t);
-
-    // Project names in the skills table show a summary of that project.
-    const link = e.target.closest(".matrix thead a");
-    const project = link && document.querySelector(link.getAttribute("href"));
-    if (project) {
-      if (!peek.on) { peek.x = px; peek.y = py; }
-      fillPeek(project);
-      peek.on = true;
-    } else {
-      peek.on = false;
-    }
-    peek.el.classList.toggle("is-on", peek.on);
     kick();
   });
 
@@ -552,11 +433,7 @@ if (finePointer && !reduceMotion) {
   });
   document.addEventListener("pointerup", () => { down = false; kick(); });
 
-  const hide = () => {
-    root.classList.remove("cursor-on");
-    peek.on = false;
-    peek.el.classList.remove("is-on");
-  };
+  const hide = () => root.classList.remove("cursor-on");
   root.addEventListener("mouseleave", hide);
   window.addEventListener("blur", hide);
 }
@@ -579,10 +456,10 @@ const playOnce = (els, threshold, onPlay) => {
 if (chartHost) playOnce([chartHost], 0.6, (el) => setTimeout(() => el.classList.remove("play"), 2500));
 
 // Bars grow. The ProstadeNet comparison sits in a tab, which plays its bars when it opens (see activateTab).
-document.querySelectorAll(".bars").forEach((list) => {
+document.querySelectorAll(".bars, .pipeline").forEach((list) => {
   [...list.children].forEach((li, i) => li.style.setProperty("--i", i));
 });
-playOnce([...document.querySelectorAll(".bars")].filter((b) => !b.closest(".pane")), 0.5);
+playOnce([...document.querySelectorAll(".bars, .balance__bar")].filter((b) => !b.closest(".pane")), 0.5);
 
 // Count-up: the "At a glance" figures that start with a number count up from zero.
 const glance = document.querySelector(".glance");
@@ -604,7 +481,7 @@ if (glance) {
   });
 }
 
-/* ---------- Scroll-linked: progress bar and timeline line ---------- */
+/* ---------- Scroll-linked: progress bar (the timeline line lives in showpieces.js) ---------- */
 
 const topbar = document.querySelector(".topbar");
 const progress = document.createElement("div");
@@ -612,34 +489,14 @@ progress.className = "progress";
 progress.setAttribute("aria-hidden", "true");
 if (topbar) topbar.append(progress);
 
-const timeline = document.querySelector(".timeline");
-const timelineItems = timeline ? [...timeline.children] : [];
-let itemTops = [];
-const measureTimeline = () => { itemTops = timelineItems.map((li) => li.offsetTop + 26); }; // 26px: centre of each dot
-if (timeline) {
-  timeline.classList.add("is-live");
-  measureTimeline();
-  window.addEventListener("resize", measureTimeline);
-}
-
 let scrollFrame = 0;
 const paintScroll = () => {
   scrollFrame = 0;
-  // Read everything first, then write, so the browser never lays out twice in one frame.
   const max = document.documentElement.scrollHeight - window.innerHeight;
   const pageP = max > 0 ? window.scrollY / max : 0;
-  let lineP = 0, lineH = 0;
-  if (timeline) {
-    const r = timeline.getBoundingClientRect();
-    lineH = r.height - 16;
-    // The line fills down to just past the middle of the window.
-    lineP = Math.max(0, Math.min(1, (window.innerHeight * 0.6 - r.top - 8) / lineH));
-  }
   progress.style.transform = `scaleX(${pageP.toFixed(4)})`;
-  if (timeline) {
-    timeline.style.setProperty("--p", lineP.toFixed(4));
-    timelineItems.forEach((li, i) => li.classList.toggle("is-lit", itemTops[i] <= 8 + lineP * lineH));
-  }
+  const end = max > 0 && window.scrollY >= max - 2;
+  if (end !== atEnd) { atEnd = end; markNav(); }
 };
 const scheduleScroll = () => { if (!scrollFrame) scrollFrame = requestAnimationFrame(paintScroll); };
 window.addEventListener("scroll", scheduleScroll, { passive: true });
@@ -649,12 +506,13 @@ paintScroll();
 /* ---------- Liquid silk behind the intro ----------
    One full-screen triangle and a fragment shader. The cloth height comes from layered sines bent by slow noise,
    lit with a soft diffuse term and a glossy highlight. Rendered at half size, capped at 30 fps,
-   paused while the intro is off screen, and drawn once as a still frame with reduced motion. */
+   paused while the intro is off screen, and drawn once as a still frame with reduced motion.
+   The light swings toward the pointer, the cloth ripples where it moves, and fast scrolling speeds the folds up. */
 const SILK = { speed: 2, gloss: 1.6, calm: 0.6 };
 const SILK_FRAG = `
 precision mediump float;
-uniform vec2 res;
-uniform float time, gloss, calm;
+uniform vec2 res, mouse;
+uniform float time, gloss, calm, amp, lit;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -668,14 +526,20 @@ float cloth(vec2 p, float t) {
   h += 0.22 * sin(p.x * 5.3 + p.y * 1.1 + t * 0.23);
   return h;
 }
+vec2 toP(vec2 frag) { vec2 p = (frag - 0.5 * res) / res.y * 2.3; p.x *= 0.85; return p; }
+// The cloth plus a ripple spreading from the pointer, fading with distance and with time since the last move
+float surf(vec2 p, vec2 m) {
+  float d = length(p - m);
+  return cloth(p, time) + amp * 0.55 * sin(d * 9.0 - time * 3.0) * exp(-d * 1.6);
+}
 void main() {
   vec2 uv = gl_FragCoord.xy / res;
-  vec2 p = (gl_FragCoord.xy - 0.5 * res) / res.y * 2.3;
-  p.x *= 0.85;
+  vec2 p = toP(gl_FragCoord.xy);
+  vec2 m = toP(mouse * res);
   float e = 0.012;
-  float h = cloth(p, time);
-  vec3 n = normalize(vec3(-(cloth(p + vec2(e, 0.0), time) - h) / e * 0.22, -(cloth(p + vec2(0.0, e), time) - h) / e * 0.22, 1.0));
-  vec3 L = normalize(vec3(-0.35, 0.55, 0.75));
+  float h = surf(p, m);
+  vec3 n = normalize(vec3(-(surf(p + vec2(e, 0.0), m) - h) / e * 0.22, -(surf(p + vec2(0.0, e), m) - h) / e * 0.22, 1.0));
+  vec3 L = normalize(vec3(mix(-0.35, (mouse.x - 0.5) * 1.6, lit), mix(0.55, (mouse.y - 0.5) * 1.6 + 0.2, lit), 0.75));
   float diff = clamp(dot(n, L), 0.0, 1.0);
   float spec = pow(clamp(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 9.0);
   float sheen = pow(1.0 - n.z, 1.6);
@@ -715,12 +579,21 @@ void main() {
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
   const uRes = gl.getUniformLocation(prog, "res");
   const uTime = gl.getUniformLocation(prog, "time");
+  const uMouse = gl.getUniformLocation(prog, "mouse");
+  const uAmp = gl.getUniformLocation(prog, "amp");
+  const uLit = gl.getUniformLocation(prog, "lit");
   gl.uniform1f(gl.getUniformLocation(prog, "gloss"), SILK.gloss);
   gl.uniform1f(gl.getUniformLocation(prog, "calm"), SILK.calm);
 
   let clock = 8, last = 0, running = false, frame = 0;
+  // Pointer in canvas units (0 to 1, y up), eased toward its target each frame
+  const ptr = { x: 0.7, y: 0.6, tx: 0.7, ty: 0.6, amp: 0, lit: 0, tlit: 0 };
+  let lastY = window.scrollY, boost = 0;
   const draw = () => {
     gl.uniform1f(uTime, clock);
+    gl.uniform2f(uMouse, ptr.x, ptr.y);
+    gl.uniform1f(uAmp, ptr.amp);
+    gl.uniform1f(uLit, ptr.lit);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
   const size = () => {
@@ -736,7 +609,15 @@ void main() {
     if (!running) return;
     const dt = Math.min(now - last, 100);
     if (dt >= 33) {
-      clock += (dt / 1000) * SILK.speed;
+      // Scroll speed in px per ms, eased so a flick speeds the folds up and they settle back
+      const v = Math.abs(window.scrollY - lastY) / dt;
+      lastY = window.scrollY;
+      boost += (Math.min(v * 4, 10) - boost) * 0.15;
+      clock += (dt / 1000) * (SILK.speed + boost);
+      ptr.x += (ptr.tx - ptr.x) * 0.12;
+      ptr.y += (ptr.ty - ptr.y) * 0.12;
+      ptr.lit += (ptr.tlit - ptr.lit) * 0.08;
+      ptr.amp *= 0.94;
       last = now;
       draw();
     }
@@ -747,6 +628,14 @@ void main() {
   new ResizeObserver(size).observe(canvas);
   requestAnimationFrame(() => canvas.classList.add("is-on"));
   if (reduceMotion) return;
+  hero.addEventListener("pointermove", (e) => {
+    const r = canvas.getBoundingClientRect();
+    ptr.tx = (e.clientX - r.left) / r.width;
+    ptr.ty = 1 - (e.clientY - r.top) / r.height;
+    ptr.tlit = 1;
+    ptr.amp = Math.min(1, ptr.amp + 0.08);
+  });
+  hero.addEventListener("pointerleave", () => { ptr.tx = 0.7; ptr.ty = 0.6; ptr.tlit = 0; });
   new IntersectionObserver(([entry]) => {
     running = entry.isIntersecting;
     if (running && !frame) {
