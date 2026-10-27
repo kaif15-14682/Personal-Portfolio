@@ -1,10 +1,17 @@
 # Sheikh Kaif – Portfolio
 
-Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tools, mobile apps and machine learning.
+Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tools, mobile apps and machine learning, currently training in revenue cycle management at DocPro Health.
 
 **Live site:** https://kaif15-14682.github.io/Personal-Portfolio/
 
 ![Portfolio home page](assets/preview.png)
+
+## What's inside
+
+- **Projects:** a Laravel school management system, Retool dashboards, the ProstadeNet thesis, Flutter apps, a stroke prediction notebook and a Bash password manager, each with a live visual and a case study.
+- **How they work:** four scroll stories. A request travels through the school system's layers, a tissue tile goes through the thesis pipeline, a dot chart shows why 94% accuracy wasn't enough, and a sample medical claim moves through the revenue cycle, from eligibility and CPT/ICD-10-CM coding to denial, resubmission and payment.
+- **Skills map:** every skill linked to the projects and roles that used it.
+- **Experience, education and contact.**
 
 ## Tech
 
@@ -24,8 +31,8 @@ Open `index.html` in a browser.
 ```
 index.html      Page content
 styles.css      Styles
-script.js       Interactions and animations
-showpieces.js   Scroll stories, running mockups, case studies and skills map
+script.js       Interactions, scroll reveals, section rail and hero background
+showpieces.js   Scroll stories, running mockups, case studies, skills map and RCM cycle ring
 assets/         CV, favicon and preview image
 ```
 
