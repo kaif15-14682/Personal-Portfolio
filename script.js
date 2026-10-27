@@ -195,9 +195,29 @@ document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("cl
 const navLinks = [...document.querySelectorAll(".topnav a")];
 // Contact is too short to ever reach the band below, so the very bottom of the page counts as Contact.
 let spied = "", atEnd = false;
+// Wide screens also get a rail of the same sections down the left edge (hidden by CSS elsewhere).
+const rail = document.createElement("nav");
+rail.className = "rail";
+rail.setAttribute("aria-label", "Page sections");
+rail.innerHTML = `<ol>${navLinks.map((a) => `<li><a href="${a.getAttribute("href")}"><span>${a.textContent}</span></a></li>`).join("")}</ol>`;
+document.body.append(rail);
+const railLinks = [...rail.querySelectorAll("a")];
+const railTargets = railLinks.map((a) => document.querySelector(a.getAttribute("href")));
 const markNav = () => {
   const id = atEnd ? "contact" : spied;
-  navLinks.forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${id}`));
+  [...navLinks, ...railLinks].forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${id}`));
+};
+// The rail's line reaches each dot as its section crosses 40% of the window, and fills between dots in proportion.
+const paintRail = () => {
+  if (!rail.getClientRects().length) return; // hidden below 80rem
+  const y = window.innerHeight * 0.4;
+  const tops = railTargets.map((s) => (s ? s.getBoundingClientRect().top : Infinity));
+  let i = 0;
+  while (i < tops.length - 1 && tops[i + 1] <= y) i++;
+  const span = tops[i + 1] - tops[i];
+  const f = i < tops.length - 1 && span > 0 ? Math.max(0, Math.min(1, (y - tops[i]) / span)) : 0;
+  const p = atEnd ? 1 : (i + f) / (tops.length - 1);
+  rail.firstElementChild.style.setProperty("--p", p.toFixed(4));
 };
 if ("IntersectionObserver" in window && navLinks.length) {
   const sections = navLinks.map((a) => document.querySelector(a.getAttribute("href")));
@@ -306,20 +326,21 @@ if (!reduceMotion && "IntersectionObserver" in window) {
       const row = Math.round((el.offsetTop - firstTile.offsetTop) / el.offsetHeight);
       el.style.setProperty("--i", col + Math.min(row, 1));
     }
-    // Section titles rise word by word, like the headline, once their block reveals.
-    if (el.matches(".block__head, .contact")) splitWords(el.querySelector("h2"));
+    // Section titles rise word by word, like the headline, once their block reveals. The contact line fills in letter by letter instead (showpieces.js).
+    if (el.matches(".block__head")) splitWords(el.querySelector("h2"));
     el.classList.add("reveal");
     revealer.observe(el);
   });
 }
 
 if (finePointer && !reduceMotion) {
-  // Buttons lean a few pixels toward the pointer.
-  const cap = (v) => Math.max(-6, Math.min(6, v));
+  // Buttons lean a few pixels toward the pointer; the contact buttons pull twice as far, like a magnet.
   document.querySelectorAll(".btn").forEach((btn) => {
+    const k = btn.closest(".contact") ? 2 : 1;
+    const cap = (v) => Math.max(-6 * k, Math.min(6 * k, v));
     btn.addEventListener("pointermove", (e) => {
       const r = btn.getBoundingClientRect();
-      btn.style.translate = `${cap((e.clientX - r.left - r.width / 2) * 0.2)}px ${cap((e.clientY - r.top - r.height / 2) * 0.3)}px`;
+      btn.style.translate = `${cap((e.clientX - r.left - r.width / 2) * 0.2 * k)}px ${cap((e.clientY - r.top - r.height / 2) * 0.3 * k)}px`;
     });
     btn.addEventListener("pointerleave", () => { btn.style.translate = ""; });
   });
@@ -497,6 +518,7 @@ const paintScroll = () => {
   progress.style.transform = `scaleX(${pageP.toFixed(4)})`;
   const end = max > 0 && window.scrollY >= max - 2;
   if (end !== atEnd) { atEnd = end; markNav(); }
+  paintRail();
 };
 const scheduleScroll = () => { if (!scrollFrame) scrollFrame = requestAnimationFrame(paintScroll); };
 window.addEventListener("scroll", scheduleScroll, { passive: true });

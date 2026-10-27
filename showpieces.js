@@ -72,7 +72,7 @@ safe("pools", () => {
       section.prepend(pool);
       if (!MOTION || !G) return;
       // Measured after the pinned sections, which add scroll space above most of these
-      G.fromTo(pool, { y: -speed * 300 }, { y: speed * 300, ease: "none", scrollTrigger: { trigger: section, start: "top bottom", end: "bottom top", scrub: true, refreshPriority: -1 } });
+      G.fromTo(pool, { y: -speed * 300 }, { y: speed * 300, ease: "none", scrollTrigger: { trigger: section, start: "top bottom", end: "bottom top", scrub: true, refreshPriority: -2 } });
     });
   });
 });
@@ -106,7 +106,8 @@ let stripST = null;
 const goToProject = (card) => {
   if (!card) return;
   if (card.hidden) document.querySelector('[data-filter="all"]').click();
-  if (!stripST) { scrollToEl(card); return; }
+  // Only cards in the sideways strip need the strip's scroll maths; anything else scrolls straight to itself.
+  if (!stripST || !card.closest("#strip-track")) { scrollToEl(card); return; }
   const track = $("#strip-track");
   const dist = Math.max(1, track.scrollWidth - innerWidth);
   const x = innerWidth / 2 - card.offsetLeft - card.offsetWidth / 2;
@@ -177,11 +178,11 @@ safe("highlights", () => {
       svgEl("circle", { cx: 44, cy: 20, r: 15, class: "hl-track" }, s);
       part(s, "circle", { cx: 44, cy: 20, r: 15, pathLength: 100 }, "hl-ring", 0);
     },
-    // Four app screens, each lighting up
+    // Three app screens, each lighting up
     "p-flutter": (s) => {
-      for (let i = 0; i < 4; i++) {
-        part(s, "rect", { x: 2 + i * 15.5, y: 6, width: 11, height: 28, rx: 2.5 }, "hl-phone", i * 90);
-        part(s, "rect", { x: 4 + i * 15.5, y: 10, width: 7, height: 18, rx: 1 }, "hl-screen", i * 90 + 260);
+      for (let i = 0; i < 3; i++) {
+        part(s, "rect", { x: 8 + i * 18, y: 6, width: 11, height: 28, rx: 2.5 }, "hl-phone", i * 90);
+        part(s, "rect", { x: 10 + i * 18, y: 10, width: 7, height: 18, rx: 1 }, "hl-screen", i * 90 + 260);
       }
     },
     // One dot per group of patients; two turn red, like the strokes hiding in the data
@@ -1209,16 +1210,175 @@ safe("dots", () => {
   });
 });
 
+/* ---------- How they work 4: one claim through the revenue cycle ---------- */
+
+safe("claim", () => {
+  const stage = $("#claim-stage");
+  if (!stage) return;
+  const codes = $("#cl-codes");
+  const paths = ["#cl-p1", "#cl-p2", "#cl-p3", "#cl-p4"].map((s) => $(s));
+  // Each link runs from a procedure's right edge to a diagnosis's left edge. Two links leaving one line split slightly.
+  // Line 2 starts on the wrong diagnosis (p3), which gets it denied; p4 is the corrected link.
+  const LINKS = [["#cl-l1", "#cl-a", -4], ["#cl-l1", "#cl-b", 4], ["#cl-l2", "#cl-b", 0], ["#cl-l2", "#cl-a", 0]];
+  const drawLinks = () => {
+    const box = codes.getBoundingClientRect();
+    LINKS.forEach(([from, to, dy], i) => {
+      const a = $(from).getBoundingClientRect(), b = $(to).getBoundingClientRect();
+      const x1 = a.right - box.left, y1 = a.top - box.top + a.height / 2 + dy;
+      const x2 = b.left - box.left, y2 = b.top - box.top + b.height / 2;
+      const m = (x2 - x1) / 2;
+      paths[i].setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} C${(x1 + m).toFixed(1)} ${y1.toFixed(1)} ${(x2 - m).toFixed(1)} ${y2.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`);
+    });
+  };
+  drawLinks();
+  new ResizeObserver(drawLinks).observe(codes);
+  if (!MOTION || !G) return;
+
+  stage.classList.add("is-pinned");
+  const steps = [...document.querySelectorAll("#claim-steps li")];
+  const pill = $("#cl-pill"), packet = $("#cl-packet"), route = $("#cl-route"), p3 = paths[2];
+  const bars = [...document.querySelectorAll("#cl-track i")];
+  const days = $("#cl-days"), bal = $("#cl-bal");
+  const n = { days: 0, bal: 155 };
+  const paint = () => { days.textContent = Math.round(n.days); bal.textContent = `$${n.bal.toFixed(2)}`; };
+  // [from time, step, pill text, pill tone, route note, packet tone]
+  const STATES = [
+    [0, 0, "Draft", "", "", ""],
+    [1.4, 1, "Verified", "is-blue", "", ""],
+    [2.2, 2, "Coded", "is-blue", "", ""],
+    [3.8, 3, "Submitted", "is-blue", "837 claim sent", ""],
+    [4.7, 4, "Denied", "is-bad", "835 remit: denied", "is-bad"],
+    [5.8, 4, "Resubmitted", "is-blue", "Corrected 837 sent", ""],
+    [6.4, 5, "Paid", "is-good", "835 remit received", "is-good"],
+  ];
+  let shown = -1;
+  const sync = (t) => {
+    let s = 0;
+    while (s < STATES.length - 1 && t >= STATES[s + 1][0]) s++;
+    p3.classList.toggle("is-bad", t >= 4.8);
+    if (s === shown) return;
+    shown = s;
+    const [, k, label, tone, note, ptone] = STATES[s];
+    steps.forEach((li, i) => { li.classList.toggle("on", i === k); li.classList.toggle("done", i < k); });
+    pill.textContent = label;
+    pill.className = `claim__pill ${tone}`;
+    route.textContent = note;
+    packet.className = `claim__packet ${ptone}`;
+  };
+  const tl = G.timeline({
+    defaults: { ease: "power2.out" },
+    onUpdate: () => sync(tl.time()),
+    scrollTrigger: { trigger: stage, start: () => `top ${barH()}`, end: "+=340%", pin: true, scrub: 0.6, invalidateOnRefresh: true },
+  });
+  // Demographics type in, then eligibility comes back clean
+  tl.set(n, { days: 0, bal: 155, onUpdate: paint }, 0);
+  document.querySelectorAll(".claim__fields dd").forEach((dd, i) => tl.fromTo(dd, { "--w": "0%" }, { "--w": "100%", duration: 0.45, ease: "none" }, i * 0.25));
+  tl.fromTo("#cl-elig", { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.4 }, 1.5)
+    // Coding: lines and diagnoses appear, then the pointers link them
+    .fromTo(".claim__lines li, .claim__dx li", { opacity: 0.3 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 2.3)
+    .fromTo(paths, { strokeDashoffset: 1 }, { strokeDashoffset: (i) => (i === 3 ? 1 : 0), duration: 0.45, stagger: 0.1, ease: "power1.inOut" }, 2.8)
+    .fromTo(p3, { opacity: 1 }, { opacity: 1, duration: 0.01 }, 0)
+    // Submission
+    .fromTo(packet, { "--x": "0%", opacity: 0 }, { opacity: 1, duration: 0.1 }, 3.85)
+    .to(packet, { "--x": "100%", duration: 0.5, ease: "power1.inOut" }, 3.9)
+    .fromTo(bars[0], { "--p": 0 }, { "--p": 1, duration: 0.5, ease: "none" }, 3.9)
+    .to(n, { days: 9, duration: 0.6, ease: "none", onUpdate: paint }, 3.9)
+    // Denied for the wrong link on line 2, fixed, resubmitted
+    .to(packet, { "--x": "0%", duration: 0.4, ease: "power1.inOut" }, 4.7)
+    .fromTo(bars[1], { "--p": 0 }, { "--p": 1, duration: 0.3, ease: "none" }, 4.7)
+    .fromTo("#cl-deny", { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.3 }, 4.9)
+    .to(p3, { opacity: 0, duration: 0.3 }, 5.25)
+    .to(paths[3], { strokeDashoffset: 0, duration: 0.4, ease: "power1.inOut" }, 5.4)
+    .to("#cl-deny", { opacity: 0, duration: 0.2 }, 5.8)
+    .to(packet, { "--x": "100%", duration: 0.4, ease: "power1.inOut" }, 5.8)
+    .fromTo(bars[2], { "--p": 0 }, { "--p": 1, duration: 0.4, ease: "none" }, 5.8)
+    .to(n, { days: 16, duration: 0.5, ease: "none", onUpdate: paint }, 5.8)
+    // Paid: the remit comes back and posts
+    .to(packet, { "--x": "0%", duration: 0.4, ease: "power1.inOut" }, 6.4)
+    .fromTo(bars[3], { "--p": 0 }, { "--p": 1, duration: 0.3, ease: "none" }, 6.4)
+    .fromTo("#cl-era", { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.3 }, 6.7)
+    .fromTo(".claim__fall i", { scaleX: 0 }, { scaleX: 1, duration: 0.35, stagger: 0.12, ease: "power2.out" }, 6.75)
+    .to(n, { days: 23, bal: 0, duration: 0.6, ease: "none", onUpdate: paint }, 6.8)
+    .to({}, { duration: 0.4 });
+  paint();
+  sync(0);
+});
+
+/* ---------- Experience: the RCM cycle ring loops beside the DocPro role ---------- */
+
+safe("cycle", () => {
+  const svg = $("#cycle-svg");
+  if (!svg) return;
+  const ST = ["Demographics", "Eligibility", "Coding", "Claim submission", "Payment posting", "AR and denials"];
+  const R = 76, NUM_R = 93, GAP = 7; // GAP: degrees left open between segments
+  const pt = (deg, r) => [Math.sin((deg * Math.PI) / 180) * r, -Math.cos((deg * Math.PI) / 180) * r];
+  const arc = (a0, a1) => { const [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R); return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  svgEl("circle", { class: "track", r: 62 }, svg);
+  const segs = [], fills = [], nums = [];
+  ST.forEach((_, i) => {
+    const a0 = i * 60 + GAP / 2, a1 = (i + 1) * 60 - GAP / 2;
+    segs.push(svgEl("path", { class: "seg", d: arc(a0, a1) }, svg));
+    fills.push(svgEl("path", { class: "fill", d: arc(a0, a1), pathLength: 1, "stroke-dasharray": 1, "stroke-dashoffset": 1 }, svg));
+    const [x, y] = pt((a0 + a1) / 2, NUM_R);
+    const t = svgEl("text", { class: "num", x: x.toFixed(1), y: y.toFixed(1) }, svg);
+    t.textContent = i + 1;
+    nums.push(t);
+  });
+  const num = $("#cy-n"), title = $("#cy-t");
+  let last = -1;
+  // k: the stage in progress, f: how far through it (0–1)
+  const show = (k, f) => {
+    fills.forEach((p, i) => p.setAttribute("stroke-dashoffset", i === k ? (1 - f).toFixed(3) : 1));
+    if (k === last) return;
+    last = k;
+    segs.forEach((s, i) => s.classList.toggle("done", i < k));
+    nums.forEach((t, i) => t.classList.toggle("on", i <= k));
+    num.textContent = `0${k + 1} / 06`;
+    title.textContent = ST[k];
+  };
+  if (!MOTION) { segs.forEach((s) => s.classList.add("done")); nums.forEach((t) => t.classList.add("on")); return; }
+  const STAGE = 1700;
+  let start = 0, frame = 0, offset = 0;
+  const tick = (now) => {
+    if (!start) start = now - offset;
+    const t = (now - start) % (STAGE * ST.length);
+    offset = t;
+    const k = Math.floor(t / STAGE);
+    // Each segment sweeps in over the first 60% of its time, then holds.
+    show(k, Math.min(1, (t - k * STAGE) / (STAGE * 0.6)));
+    frame = requestAnimationFrame(tick);
+  };
+  show(0, 0);
+  watch($("#cycle"), () => { if (!frame) { start = 0; frame = requestAnimationFrame(tick); } }, () => { cancelAnimationFrame(frame); frame = 0; }, 0.4);
+});
+
+/* ---------- Contact: the closing line fills in letter by letter as it scrolls up ---------- */
+
+safe("contact", () => {
+  const h = $(".contact__big");
+  if (!h || !MOTION || !G) return;
+  const text = h.textContent.trim();
+  h.setAttribute("aria-label", text);
+  // Words stay whole so a line never breaks inside one.
+  h.innerHTML = text.split(" ").map((w) => `<span aria-hidden="true" style="display: inline-block; white-space: nowrap">${[...w].map((c) => `<span class="ch">${c}</span>`).join("")}</span>`).join(" ");
+  G.fromTo(h.querySelectorAll(".ch"), { color: "#3a3a3d" }, {
+    color: "#f5f5f7", stagger: 0.1, ease: "none",
+    // Ends as the card's bottom clears the window, which the last scroll position always reaches.
+    scrollTrigger: { trigger: h, start: "top 90%", endTrigger: ".contact", end: "bottom 97%", scrub: 0.4, refreshPriority: -2 },
+  });
+});
+
 /* ---------- Skills map ---------- */
 
 safe("skills", () => {
   const svg = $("#skills-svg");
   if (!svg) return;
-  const P = [["School system", "p-school"], ["Dashboards", "p-retool"], ["ProstadeNet", "p-prostadenet"], ["Flutter apps", "p-flutter"], ["Stroke ML", "p-stroke"], ["Password CLI", "p-password"]];
+  const P = [["School system", "p-school"], ["Dashboards", "p-retool"], ["ProstadeNet", "p-prostadenet"], ["Flutter apps", "p-flutter"], ["Stroke ML", "p-stroke"], ["Password CLI", "p-password"], ["DocPro Health (RCM)", "x-docpro"]];
   const S = [
     ["SQL & MySQL", [0, 1]], ["PHP & Laravel", [0]], ["Retool", [1]], ["HTML, CSS & Tailwind", [0]],
     ["Python", [2, 4]], ["TensorFlow & Keras", [2]], ["OpenCV", [2]], ["scikit-learn & pandas", [4]],
     ["Flutter & Dart", [3]], ["REST APIs", [3]], ["Bash & Linux", [5]], ["Git & GitHub", [0, 3, 4, 5]],
+    ["CPT & ICD-10-CM coding", [6]], ["Claims, AR & denials", [6]],
   ];
   const sy = (i) => 30 + i * 37;
   const py = (j) => 55 + j * 72;
@@ -1234,7 +1394,7 @@ safe("skills", () => {
     return g;
   });
   const pNodes = P.map(([name, id], j) => {
-    const g = svgEl("g", { class: "pn", tabindex: 0, role: "link", "aria-label": `${name}: go to the project` }, svg);
+    const g = svgEl("g", { class: "pn", tabindex: 0, role: "link", "aria-label": `${name}: go to it on the page` }, svg);
     svgEl("circle", { cx: 476, cy: py(j), r: 8 }, g);
     svgEl("text", { x: 492, y: py(j) + 4 }, g).textContent = name;
     const go = () => goToProject(document.getElementById(id));
@@ -1280,7 +1440,7 @@ safe("timeline", () => {
   const items = [...list.children];
   const year = $("#tl-year"), label = $("#tl-label");
   // Newest first, so the year counts back as you read down.
-  const ROLES = [[2026, "Workflow automation in Retool"], [2025, "Thesis research"], [2024, "Sales"], [2019, "Started tutoring"]];
+  const ROLES = [[2026, "RCM training at DocPro Health"], [2026, "Workflow automation in Retool"], [2025, "Thesis research"], [2024, "Sales"], [2019, "Started tutoring"]];
   list.classList.add("is-live");
   const light = (p) => {
     list.style.setProperty("--p", p.toFixed(4));
@@ -1294,9 +1454,13 @@ safe("timeline", () => {
     const y = { v: 2026 };
     const tl = G.timeline({
       defaults: { ease: "power2.out" },
-      scrollTrigger: { trigger: wrap, start: () => `top ${barH()}`, end: "+=200%", pin: true, scrub: 0.6 },
+      scrollTrigger: { trigger: wrap, start: () => `top ${barH()}`, end: "+=250%", pin: true, scrub: 0.6, invalidateOnRefresh: true, refreshPriority: -1 },
     });
-    tl.set(items, { x: 60, opacity: 0 }, 0).set(y, { v: 2026 }, 0);
+    // When the roles are taller than the window, the list drifts up as they arrive, so the newest sits in view
+    // and the last one ends 12px clear of the bottom edge.
+    const over = () => Math.max(0, list.offsetHeight - wrap.clientHeight + 24) / 2;
+    tl.set(items, { x: 60, opacity: 0 }, 0).set(y, { v: 2026 }, 0)
+      .fromTo(list, { y: over }, { y: () => -over(), ease: "none", duration: items.length - 0.4, immediateRender: false }, 0);
     items.forEach((li, i) => {
       tl.to(li, { x: 0, opacity: 1, duration: 0.6 }, i)
         .to(y, { v: ROLES[i][0], duration: 0.6, ease: "none", onUpdate: () => (year.textContent = Math.round(y.v)), onStart: () => (label.textContent = ROLES[i][1]), onReverseComplete: () => (label.textContent = ROLES[Math.max(0, i - 1)][1]) }, i)
@@ -1306,7 +1470,7 @@ safe("timeline", () => {
     tl.to(items, { opacity: 1, duration: 0.4 }, items.length).to({}, { duration: 0.3 });
     year.textContent = "2026";
     label.textContent = ROLES[0][1];
-    return () => { wrap.classList.remove("is-pinned"); G.set(items, { clearProps: "transform,opacity" }); };
+    return () => { wrap.classList.remove("is-pinned"); G.set(items, { clearProps: "transform,opacity" }); G.set(list, { clearProps: "transform" }); };
   });
 
   // Everywhere else: the line fills down to just past the middle of the window as you scroll.

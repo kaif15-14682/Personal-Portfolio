@@ -1066,7 +1066,7 @@ html.lenis, html.lenis body { height: auto; }
 
 /* Experience: on tall screens the year stays pinned and counts back as each role slides in */
 .tl__year { display: none; }
-.tl.is-pinned { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: 3rem; align-items: center; height: calc(100vh - var(--bar, 3.75rem)); }
+.tl.is-pinned { display: grid; grid-template-columns: 0.75fr 1.25fr; grid-template-rows: minmax(0, 1fr); gap: 3rem; align-items: center; height: calc(100vh - var(--bar, 3.75rem)); overflow: clip; }
 .tl.is-pinned .timeline ul { margin-top: 0.4rem; font-size: 0.875rem; gap: 0.2rem; }
 .tl.is-pinned .tl__year { display: grid; }
 .tl__year span { font-size: clamp(4rem, 2rem + 7vw, 8rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--navy); }
@@ -1224,3 +1224,131 @@ html.lenis, html.lenis body { height: auto; }
 .intro.is-go .intro__where, .intro.is-go .intro__count, .intro.is-go .intro__skip { animation: intro-in 0.6s cubic-bezier(.2, .7, .2, 1) 0.3s both; }
 /* The intro's entrance waits under the curtain and plays as it lifts */
 .intro-on .hero, .intro-on .hero * { animation-play-state: paused !important; }
+
+/* ---------- Section numbers: a small index and a rule that draws in above each section title ---------- */
+.idx { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; font-size: 0.8125rem; font-weight: 600; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.idx i { width: 2.5rem; height: 1px; background: var(--accent); transform-origin: left; }
+@keyframes rule { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.reveal .idx i { transform: scaleX(0); }
+.reveal.is-in .idx i { animation: rule 0.8s cubic-bezier(.65, 0, .35, 1) 0.1s both; }
+.reveal.is-in .idx span { animation: fade 0.6s ease both; }
+
+/* ---------- Section rail: wide screens only. Dots mark the sections, the line fills with the scroll. ---------- */
+.rail { display: none; }
+@media (min-width: 80rem) and (min-height: 560px) {
+  .rail { display: block; position: fixed; z-index: 30; left: 1.25rem; top: 50%; translate: 0 -50%; }
+}
+.rail ol { list-style: none; position: relative; display: grid; gap: 0.95rem; }
+.rail ol::before, .rail ol::after { content: ""; position: absolute; left: 4px; top: 0.5rem; bottom: 0.5rem; width: 2px; background: var(--line-strong); }
+.rail ol::after { background: var(--accent); transform-origin: top; transform: scaleY(var(--p, 0)); }
+.rail a { position: relative; z-index: 1; display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; font-weight: 500; color: var(--muted); text-decoration: none; }
+.rail a::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); border: 2px solid var(--line-strong); transition: background-color 0.3s, border-color 0.3s; }
+.rail a span { padding: 0.1rem 0.45rem; border-radius: 4px; background: rgb(0 0 0 / 0.72); white-space: nowrap; opacity: 0; translate: -4px 0; transition: opacity 0.25s, translate 0.25s cubic-bezier(.23, 1, .32, 1); }
+.rail:hover a span, .rail a:focus-visible span { opacity: 1; translate: 0 0; }
+.rail a:hover, .rail a.is-current { color: var(--navy); }
+.rail a.is-current::before { background: var(--accent); border-color: var(--accent); }
+/* Labels only fit beside the page from 1408px; narrower, they show on hover. */
+@media (min-width: 88rem) { .rail a.is-current span { opacity: 1; translate: 0 0; } }
+
+/* ---------- Experience: the RCM cycle ring beside the DocPro role ---------- */
+@media (min-width: 40rem) {
+  .timeline > li.has-cycle { display: grid; grid-template-columns: minmax(0, 1fr) 9.5rem; gap: 1.5rem; align-items: center; }
+  .tl.is-pinned .timeline > li.has-cycle { grid-template-columns: minmax(0, 1fr) 8.25rem; }
+}
+.timeline__more { display: inline-block; margin-top: 0.6rem; font-size: 0.875rem; font-weight: 500; }
+.cycle { position: relative; width: min(100%, 11rem); aspect-ratio: 1; margin: 1rem auto 0; }
+@media (min-width: 40rem) { .cycle { width: 100%; margin: 0; } }
+.cycle svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.cycle .track { fill: none; stroke: var(--line); stroke-width: 1; }
+.cycle .seg { fill: none; stroke: var(--line-strong); stroke-width: 7; transition: stroke 0.4s; }
+.cycle .seg.done { stroke: rgb(41 151 255 / 0.42); }
+.cycle .fill { fill: none; stroke: var(--accent); stroke-width: 7; }
+.cycle .num { fill: var(--muted); font: 600 10px var(--sans); text-anchor: middle; dominant-baseline: central; transition: fill 0.3s; }
+.cycle .num.on { fill: var(--navy); }
+.cycle__mid { position: absolute; inset: 24%; display: grid; place-content: center; text-align: center; line-height: 1.2; }
+.cycle__mid small { font-size: 0.6875rem; font-weight: 600; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.cycle__mid b { margin-top: 0.15rem; font-size: 0.8125rem; color: var(--navy); }
+
+/* ---------- How they work 4: one claim through the revenue cycle ---------- */
+.claim { min-height: 36rem; display: grid; align-items: center; padding-block: 2rem; background: radial-gradient(50rem 24rem at 35% 45%, rgb(41 151 255 / 0.06), transparent 70%); }
+.claim.is-pinned { height: calc(100vh - var(--bar, 3.75rem)); padding-block: 0; }
+.claim__grid { display: grid; gap: 1.25rem; align-items: center; }
+@media (min-width: 56rem) { .claim__grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); gap: 3rem; } }
+.claim__pill { margin-left: auto; padding: 0.1rem 0.6rem; border-radius: 999px; background: var(--line); color: var(--body); font-size: 0.72rem; font-weight: 600; transition: background-color 0.3s, color 0.3s; }
+.claim__pill.is-blue { background: var(--accent-soft); color: var(--accent-ink); }
+.claim__pill.is-bad { background: var(--warn-soft); color: var(--warn); }
+.claim__pill.is-good { background: rgb(48 209 88 / 0.14); color: #4ade80; }
+.claim__route { display: grid; gap: 0.4rem; padding: 0.7rem 1rem 0.6rem; border-bottom: 1px solid var(--line); }
+.claim__nodes { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); }
+.claim__rail {
+  position: relative; height: 8px; margin-inline: 0.25rem;
+  --dot: radial-gradient(circle, #6e6e73 0 3px, transparent 3.5px);
+  background: var(--dot) 0 50% / 8px 8px no-repeat, var(--dot) 50% 50% / 8px 8px no-repeat, var(--dot) 100% 50% / 8px 8px no-repeat, linear-gradient(var(--line-strong), var(--line-strong)) 0 50% / 100% 2px no-repeat;
+}
+.claim__packet { position: absolute; top: 50%; left: var(--x, 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgb(41 151 255 / 0.22); transition: background-color 0.3s, box-shadow 0.3s; }
+.claim__packet.is-bad { background: var(--warn); box-shadow: 0 0 0 4px rgb(255 105 97 / 0.22); }
+.claim__packet.is-good { background: #30d158; box-shadow: 0 0 0 4px rgb(48 209 88 / 0.22); }
+.claim__route small { text-align: center; font-size: 0.72rem; color: var(--muted); min-height: 1.2em; }
+.claim__sec { padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); }
+.claim__sec:last-child { border-bottom: 0; }
+.claim__cap { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.claim__ok { font-style: normal; text-transform: none; letter-spacing: 0; font-size: 0.75rem; font-weight: 600; color: #4ade80; }
+.claim__ok::before { content: "✓ "; }
+.claim__fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem 1rem; margin: 0; }
+.claim__fields dt { font-size: 0.6875rem; color: var(--muted); }
+.claim__fields dd { margin: 0; font-size: 0.8125rem; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; clip-path: inset(0 calc(100% - var(--w, 100%)) 0 0); }
+.claim__codes { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 3.5rem; }
+.claim__lines, .claim__dx { list-style: none; display: grid; gap: 0.4rem; align-content: start; }
+.claim__lines li, .claim__dx li { position: relative; z-index: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-radius: 6px; background: var(--raised); border: 1px solid var(--line); font-size: 0.75rem; color: var(--body); min-width: 0; }
+.claim__lines b, .claim__dx b { font: 600 0.8125rem var(--mono); color: var(--ink); }
+.claim__lines span, .claim__dx span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.claim__lines em { font-style: normal; color: var(--ink); font-variant-numeric: tabular-nums; }
+.claim__dx i { flex: none; display: grid; place-items: center; width: 1.1rem; height: 1.1rem; border-radius: 4px; background: var(--accent-soft); color: var(--accent-ink); font: normal 600 0.6875rem var(--sans); }
+.claim__links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.claim__links path { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 1; stroke-dashoffset: 0; }
+#cl-p3 { opacity: 0; }
+.claim__links path.is-bad { stroke: var(--warn); }
+.claim__track { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.4rem; font-size: 0.6875rem; color: var(--muted); }
+.claim__track i { position: relative; display: block; height: 3px; margin-bottom: 0.3rem; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
+.claim__track i::after { content: ""; position: absolute; inset: 0; background: var(--accent); transform-origin: left; transform: scaleX(var(--p, 1)); }
+.claim__track .bad i::after { background: var(--warn); }
+.claim__track .good i::after { background: #30d158; }
+.claim__msg { display: grid; margin-top: 0.65rem; min-height: 3.4rem; }
+.claim__msg > * { grid-area: 1 / 1; align-self: start; }
+.claim__deny { display: flex; gap: 0.6rem; padding: 0.45rem 0.6rem; border-radius: 6px; background: var(--warn-soft); color: var(--warn); font-size: 0.8125rem; opacity: 0; }
+.claim__deny b { font: 600 0.8125rem var(--mono); }
+.claim__fall { display: flex; gap: 2px; height: 6px; margin-bottom: 0.5rem; border-radius: 3px; overflow: hidden; }
+.claim__fall i { width: var(--w); background: #30d158; transform-origin: left; }
+.claim__fall i:nth-child(2) { background: #6e6e73; }
+.claim__fall i:nth-child(3) { background: var(--accent); }
+.claim__era dl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; margin: 0; }
+.claim__era dt { display: flex; align-items: center; gap: 0.35rem; font-size: 0.6875rem; color: var(--muted); }
+.claim__era dt::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: #30d158; }
+.claim__era div:nth-child(2) dt::before { background: #6e6e73; }
+.claim__era div:nth-child(3) dt::before { background: var(--accent); }
+.claim__era dd { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+@media (max-width: 56rem) {
+  #claim-steps span { display: none; }
+  #claim-steps li { padding-block: 0.2rem; }
+  #claim-steps { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 40rem) {
+  .claim__fields { grid-template-columns: 1fr 1fr; }
+  .claim__codes { column-gap: 2rem; }
+  .claim__lines span, .claim__dx span { display: none; }
+  .claim__lines em { margin-left: auto; }
+  .claim__sec { padding: 0.6rem 0.75rem; }
+  /* The remit already shows the money, so phones drop the two stat cards to keep the pinned stage on one screen. */
+  .claim .stats { display: none; }
+}
+@media (max-width: 40rem) and (max-height: 720px) {
+  .claim__route { display: none; }
+  .claim__grid { gap: 0.75rem; }
+  #claim-steps li { padding-block: 0.1rem; }
+}
+
+/* ---------- Contact finale: the closing line fills in letter by letter as it scrolls up ---------- */
+.contact__kicker { font-size: 0.9375rem; font-weight: 600; color: var(--accent-ink); }
+.contact h2.contact__big { max-width: none; margin-top: 0.4rem; font-size: clamp(2.4rem, 1rem + 5vw, 4.75rem); letter-spacing: -0.04em; line-height: 1.02; }
+.contact__big .ch { display: inline-block; }
+@media (min-width: 48rem) { .contact { padding: 3rem 2.75rem; } }
