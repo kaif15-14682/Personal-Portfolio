@@ -40,4 +40,4 @@ assets/         CV, icons, share image and preview image
 
 ## Contact
 
-[Email](mailto:sheikhkaif977@gmail.com) · [LinkedIn](https://www.linkedin.com/in/sheikh-kaif-5bb86720b) · [GitHub](https://github.com/kaif15-14682)
+[Email](mailto:sheikhkaif977@gmail.com) · [LinkedIn](https://www.linkedin.com/in/sheikh-kaif) · [GitHub](https://github.com/kaif15-14682)
