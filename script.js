@@ -1,4 +1,5 @@
-const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Quick view (set in the head) shows the same still layout as reduced motion.
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.classList.contains("quick");
 
 /* ---------- ProstadeNet ablation chart ---------- */
 
@@ -156,39 +157,29 @@ tabs.forEach((tab, i) => {
   });
 });
 
-/* ---------- Project filters ---------- */
+/* ---------- Top bar: the section menu on small screens ---------- */
 
-const projects = [...document.querySelectorAll(".project")];
-const track = document.getElementById("strip-track");
-const filterButtons = [...document.querySelectorAll(".filters button")];
-const empty = document.getElementById("empty");
-function setFilter(filter) {
-  let shown = 0;
-  projects.forEach((p) => {
-    const match = filter === "all" || p.dataset.tags.split(" ").includes(filter);
-    p.hidden = !match;
-    if (match) shown++;
-  });
-  filterButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === filter)));
-  empty.hidden = shown > 0;
-  // The sideways strip measures its cards, so it re-measures whenever cards hide or show.
-  if (window.ScrollTrigger) ScrollTrigger.refresh();
-}
-
-// The cards fade down, switch, then rise back in, instead of jumping.
-let filterOut = null;
-function applyFilter(filter) {
-  if (reduceMotion || !track || !track.animate) { setFilter(filter); return; }
-  if (filterOut) filterOut.cancel();
-  filterOut = track.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(8px)" }], { duration: 150, easing: "cubic-bezier(.23, 1, .32, 1)", fill: "forwards" });
-  filterOut.onfinish = () => {
-    setFilter(filter);
-    track.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: "cubic-bezier(.23, 1, .32, 1)" });
-    filterOut.cancel();
-    filterOut = null;
+const topnav = document.getElementById("topnav");
+const menuBtn = document.getElementById("menu-toggle");
+if (topnav && menuBtn) {
+  const isOpen = () => topnav.classList.contains("is-open");
+  const setMenu = (open) => {
+    topnav.classList.toggle("is-open", open);
+    menuBtn.setAttribute("aria-expanded", String(open));
+    menuBtn.textContent = open ? "Close" : "Menu";
   };
+  menuBtn.addEventListener("click", () => {
+    setMenu(!isOpen());
+    if (isOpen()) topnav.querySelector("a").focus();
+  });
+  topnav.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !isOpen()) return;
+    setMenu(false);
+    menuBtn.focus();
+  });
+  document.addEventListener("pointerdown", (e) => { if (isOpen() && !e.target.closest(".topbar")) setMenu(false); });
 }
-document.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => applyFilter(b.dataset.filter)));
 
 /* ---------- Sidebar: highlight the section in view ---------- */
 
@@ -221,17 +212,40 @@ const paintRail = () => {
 };
 if ("IntersectionObserver" in window && navLinks.length) {
   const sections = navLinks.map((a) => document.querySelector(a.getAttribute("href")));
+  // The highlight tiles are the project index, so they count as Projects.
+  const highlights = document.getElementById("highlights");
   const spy = new IntersectionObserver(
     (entries) => {
       entries.forEach((e) => {
         if (!e.isIntersecting) return;
-        spied = e.target.id;
+        spied = e.target === highlights ? "projects" : e.target.id;
         markNav();
       });
     },
     { rootMargin: "-35% 0px -60% 0px" }
   );
-  sections.forEach((s) => s && spy.observe(s));
+  [...sections, highlights].forEach((s) => s && spy.observe(s));
+}
+
+/* ---------- Quick view: the whole page at once, without the scroll stories ---------- */
+
+const quickBtn = document.getElementById("quick-toggle");
+if (quickBtn) {
+  const quickOn = document.documentElement.classList.contains("quick");
+  quickBtn.setAttribute("aria-pressed", String(quickOn));
+  if (quickOn) quickBtn.title = "Bring the scroll stories back";
+  quickBtn.addEventListener("click", () => {
+    try {
+      sessionStorage.setItem("view", quickOn ? "full" : "quick");
+      sessionStorage.setItem("view-return", (atEnd ? "contact" : spied) || "about");
+    } catch (e) {}
+    // The two layouts differ in length, so the old scroll position means nothing. showpieces.js returns to the section once the page has measured itself.
+    const url = new URL(location.href);
+    url.searchParams.delete("quick");
+    history.scrollRestoration = "manual";
+    history.replaceState(null, "", url);
+    location.reload();
+  });
 }
 
 /* ---------- Terminal: type the session once when it scrolls into view ---------- */
@@ -281,9 +295,6 @@ if (copyBtn) {
   });
 }
 
-const year = document.getElementById("year");
-if (year) year.textContent = new Date().getFullYear();
-
 /* ---------- Motion ---------- */
 
 const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -316,7 +327,7 @@ if (!reduceMotion && "IntersectionObserver" in window) {
     });
   }, { rootMargin: "0px 0px -10% 0px" });
   const firstTile = document.querySelector(".hl__tile");
-  document.querySelectorAll(".highlights__title, .hl__tile, .block__head, .filters, .deep__head, .skills-map, .soft-skills, .edu__card, .contact").forEach((el) => {
+  document.querySelectorAll(".highlights__title, .hl__tile, .block__head, .deep__head, .skills-map, .soft-skills, .edu__card, .contact").forEach((el) => {
     if (el.getBoundingClientRect().top < window.innerHeight) return;
     // Cards that sit side by side come in one after another.
     if (el.matches(".edu__card")) el.style.setProperty("--i", [...el.parentElement.children].indexOf(el));
@@ -482,26 +493,6 @@ document.querySelectorAll(".bars, .pipeline").forEach((list) => {
 });
 playOnce([...document.querySelectorAll(".bars, .balance__bar")].filter((b) => !b.closest(".pane")), 0.5);
 
-// Count-up: the "At a glance" figures that start with a number count up from zero.
-const glance = document.querySelector(".glance");
-if (glance) {
-  playOnce([glance], 0.5, () => {
-    glance.querySelectorAll("strong").forEach((el) => {
-      const m = el.textContent.match(/^(\d+(?:\.\d+)?)(.*)$/s);
-      if (!m) return;
-      const to = parseFloat(m[1]);
-      const dec = (m[1].split(".")[1] || "").length;
-      const t0 = performance.now();
-      const tick = (now) => {
-        const p = Math.min(1, (now - t0) / 1200);
-        el.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(dec) + m[2];
-        if (p < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-  });
-}
-
 /* ---------- Scroll-linked: progress bar (the timeline line lives in showpieces.js) ---------- */
 
 const topbar = document.querySelector(".topbar");
@@ -525,16 +516,32 @@ window.addEventListener("scroll", scheduleScroll, { passive: true });
 window.addEventListener("resize", scheduleScroll);
 paintScroll();
 
-/* ---------- Liquid silk behind the intro ----------
-   One full-screen triangle and a fragment shader. The cloth height comes from layered sines bent by slow noise,
-   lit with a soft diffuse term and a glossy highlight. Rendered at half size, capped at 30 fps,
-   paused while the intro is off screen, and drawn once as a still frame with reduced motion.
-   The light swings toward the pointer, the cloth ripples where it moves, and fast scrolling speeds the folds up. */
-const SILK = { speed: 2, gloss: 1.6, calm: 0.6 };
+/* ---------- Midnight satin behind the whole page ----------
+   One fixed canvas, one full-screen triangle and a fragment shader. The cloth height comes from layered sines bent by slow noise,
+   lit from low at the side: slopes facing the light catch a band of blue-grey, the rest falls to black, a thin blue edge runs
+   along each fold and a glossy highlight sits on the ridges.
+   In the intro the satin is at full strength and stays quiet behind the text on the left. As the intro scrolls away it dims and
+   moves out to the margins, so it never sits bright behind body text further down.
+   Rendered at half size, capped at 30 fps, stopped while the tab is hidden, and drawn as still frames with reduced motion.
+   The light swings toward the pointer over the intro, the cloth ripples where it moves, and fast scrolling speeds the folds up. */
+const SILK = {
+  speed: 2,
+  gloss: 1.6,
+  calm: 0.82, // how much quieter the intro is behind its text
+  page: 0.5, // strength further down, in the margins
+  pageEnd: 0.66, // and in the last screen, where it swells up behind the contact card
+  middle: 0.3, // behind the content column, as a share of the margins
+  // The base lift, the band of light on each fold, the gloss, and the blue edge light
+  base: [0.003, 0.006, 0.016],
+  band: [0.3, 0.4, 0.62],
+  spec: [0.16, 0.19, 0.24],
+  edge: [0.05, 0.22, 0.42],
+};
 const SILK_FRAG = `
 precision mediump float;
 uniform vec2 res, mouse;
-uniform float time, gloss, calm, amp, lit;
+uniform float time, gloss, calm, amp, lit, hero, page, middle, zoom;
+uniform vec3 cBase, cBand, cSpec, cEdge;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -542,13 +549,14 @@ float noise(vec2 p) {
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
 float cloth(vec2 p, float t) {
-  p += 0.9 * vec2(noise(p * 0.7 + vec2(0.0, t * 0.06)), noise(p * 0.7 + vec2(4.3, -t * 0.05))) - 0.45;
+  p += 1.4 * vec2(noise(p * 0.7 + vec2(0.0, t * 0.06)), noise(p * 0.7 + vec2(4.3, -t * 0.05))) - 0.7;
   float h = sin(p.x * 1.6 + sin(p.y * 0.8 + t * 0.21) * 1.7 + t * 0.12);
   h += 0.55 * sin(p.x * 2.9 - p.y * 0.5 + sin(p.y * 1.3 - t * 0.17) * 1.3 - t * 0.15);
   h += 0.22 * sin(p.x * 5.3 + p.y * 1.1 + t * 0.23);
   return h;
 }
-vec2 toP(vec2 frag) { vec2 p = (frag - 0.5 * res) / res.y * 2.3; p.x *= 0.85; return p; }
+// Turned about 30 degrees and squeezed, so the folds run long and diagonal. zoom pushes in as the intro is covered.
+vec2 toP(vec2 frag) { vec2 p = (frag - 0.5 * res) / res.y * 3.2 / zoom; p = mat2(0.878, 0.479, -0.479, 0.878) * p; p.x *= 0.6; return p; }
 // The cloth plus a ripple spreading from the pointer, fading with distance and with time since the last move
 float surf(vec2 p, vec2 m) {
   float d = length(p - m);
@@ -560,25 +568,28 @@ void main() {
   vec2 m = toP(mouse * res);
   float e = 0.012;
   float h = surf(p, m);
-  vec3 n = normalize(vec3(-(surf(p + vec2(e, 0.0), m) - h) / e * 0.22, -(surf(p + vec2(0.0, e), m) - h) / e * 0.22, 1.0));
-  vec3 L = normalize(vec3(mix(-0.35, (mouse.x - 0.5) * 1.6, lit), mix(0.55, (mouse.y - 0.5) * 1.6 + 0.2, lit), 0.75));
-  float diff = clamp(dot(n, L), 0.0, 1.0);
-  float spec = pow(clamp(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 9.0);
-  float sheen = pow(1.0 - n.z, 1.6);
-  // Quieter behind the text on the left, fading out under the top bar and towards the next section
-  float focus = mix(1.0 - calm, 1.0, smoothstep(0.25, 0.75, uv.x));
-  focus *= smoothstep(0.0, 0.35, uv.y) * smoothstep(1.0, 0.85, uv.y);
-  float v = 0.01 + diff * diff * 0.16 + sheen * 0.12 + spec * 0.42 * gloss;
-  gl_FragColor = vec4(vec3(v * focus) * vec3(0.96, 0.98, 1.03), 1.0);
+  vec3 n = normalize(vec3(-(surf(p + vec2(e, 0.0), m) - h) / e * 0.6, -(surf(p + vec2(0.0, e), m) - h) / e * 0.6, 1.0));
+  vec3 L = normalize(vec3(mix(-0.7, (mouse.x - 0.5) * 1.6, lit), mix(0.45, (mouse.y - 0.5) * 1.6 + 0.2, lit), 0.35));
+  float nl = dot(n, L);
+  float band = pow(0.5 + 0.5 * nl, 8.0);
+  float spec = pow(clamp(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 40.0);
+  float edge = exp(-pow((nl - 0.25) / 0.09, 2.0)) * band;
+  vec3 col = cBase + band * cBand + spec * cSpec * gloss + edge * cEdge;
+  // Wide screens only: on upright ones the text runs the full width, so everything stays at the quiet level
+  float wide = smoothstep(0.9, 1.3, res.x / res.y);
+  float intro = mix(1.0 - calm, 1.0, smoothstep(0.5, 0.9, uv.x) * wide);
+  float aside = page * mix(middle, 1.0, smoothstep(0.3, 0.5, abs(uv.x - 0.5)) * wide);
+  // Fades out under the top bar
+  float focus = mix(aside, intro, hero) * smoothstep(1.0, 0.9, uv.y);
+  gl_FragColor = vec4(col * focus, 1.0);
 }`;
 
 (() => {
   const hero = document.querySelector(".hero");
-  if (!hero) return;
   const canvas = document.createElement("canvas");
-  canvas.className = "silk";
+  canvas.className = "bg-silk";
   canvas.setAttribute("aria-hidden", "true");
-  hero.prepend(canvas);
+  document.body.prepend(canvas);
   const gl = canvas.getContext("webgl", { antialias: false, alpha: false, powerPreference: "low-power" });
   if (!gl) { canvas.remove(); return; }
 
@@ -599,70 +610,93 @@ void main() {
   const aPos = gl.getAttribLocation(prog, "a");
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uRes = gl.getUniformLocation(prog, "res");
-  const uTime = gl.getUniformLocation(prog, "time");
-  const uMouse = gl.getUniformLocation(prog, "mouse");
-  const uAmp = gl.getUniformLocation(prog, "amp");
-  const uLit = gl.getUniformLocation(prog, "lit");
-  gl.uniform1f(gl.getUniformLocation(prog, "gloss"), SILK.gloss);
-  gl.uniform1f(gl.getUniformLocation(prog, "calm"), SILK.calm);
+  const u = (name) => gl.getUniformLocation(prog, name);
+  const uRes = u("res"), uTime = u("time"), uMouse = u("mouse"), uAmp = u("amp"), uLit = u("lit"), uHero = u("hero"), uZoom = u("zoom"), uPage = u("page");
+  gl.uniform1f(u("gloss"), SILK.gloss);
+  gl.uniform1f(u("calm"), SILK.calm);
+  gl.uniform1f(u("middle"), SILK.middle);
+  gl.uniform3fv(u("cBase"), SILK.base);
+  gl.uniform3fv(u("cBand"), SILK.band);
+  gl.uniform3fv(u("cSpec"), SILK.spec);
+  gl.uniform3fv(u("cEdge"), SILK.edge);
 
-  let clock = 8, last = 0, running = false, frame = 0;
+  // Starts on a stretch of the cloth with its folds on the right, clear of the text. Also the still frame with reduced motion.
+  let clock = 96, last = 0, frame = 0;
   // Pointer in canvas units (0 to 1, y up), eased toward its target each frame
   const ptr = { x: 0.7, y: 0.6, tx: 0.7, ty: 0.6, amp: 0, lit: 0, tlit: 0 };
   let lastY = window.scrollY, boost = 0;
+
+  // How far the intro has scrolled away: 0 at the top, 1 once its bottom passes under the top bar.
+  // Measured from the pin's placeholder once showpieces.js has pinned the intro, so a moved intro never skews it.
+  // And how far into the last screen and a bit, where the satin swells up for the closing contact card.
+  let heroEnd = 1, endFrom = Infinity;
+  const measure = () => {
+    endFrom = document.documentElement.scrollHeight - innerHeight * 2.2;
+    if (!hero) return;
+    const box = hero.closest(".pin-spacer") || hero;
+    heroEnd = Math.max(1, box.getBoundingClientRect().top + window.scrollY + hero.offsetHeight - 60);
+  };
+  const ease = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  const away = () => ease(window.scrollY / heroEnd);
+  const closing = () => ease((window.scrollY - endFrom) / (innerHeight * 1.2));
+
   const draw = () => {
+    const a = away();
     gl.uniform1f(uTime, clock);
     gl.uniform2f(uMouse, ptr.x, ptr.y);
-    gl.uniform1f(uAmp, ptr.amp);
-    gl.uniform1f(uLit, ptr.lit);
+    gl.uniform1f(uAmp, ptr.amp * (1 - a));
+    gl.uniform1f(uLit, ptr.lit * (1 - a));
+    gl.uniform1f(uHero, 1 - a);
+    gl.uniform1f(uZoom, 1 + 0.25 * a);
+    gl.uniform1f(uPage, SILK.page + (SILK.pageEnd - SILK.page) * closing());
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
   const size = () => {
-    const r = canvas.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.round(r.width * 0.5));
-    canvas.height = Math.max(1, Math.round(r.height * 0.5));
+    canvas.width = Math.max(1, Math.round(canvas.clientWidth * 0.5));
+    canvas.height = Math.max(1, Math.round(canvas.clientHeight * 0.5));
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(uRes, canvas.width, canvas.height);
+    measure();
     draw();
   };
   const loop = (now) => {
-    frame = 0;
-    if (!running) return;
-    const dt = Math.min(now - last, 100);
-    if (dt >= 33) {
-      // Scroll speed in px per ms, eased so a flick speeds the folds up and they settle back
-      const v = Math.abs(window.scrollY - lastY) / dt;
-      lastY = window.scrollY;
-      boost += (Math.min(v * 4, 10) - boost) * 0.15;
-      clock += (dt / 1000) * (SILK.speed + boost);
-      ptr.x += (ptr.tx - ptr.x) * 0.12;
-      ptr.y += (ptr.ty - ptr.y) * 0.12;
-      ptr.lit += (ptr.tlit - ptr.lit) * 0.08;
-      ptr.amp *= 0.94;
-      last = now;
-      draw();
-    }
     frame = requestAnimationFrame(loop);
+    const dt = Math.min(now - last, 100);
+    if (dt < 33) return;
+    // Scroll speed in px per ms, eased so a flick speeds the folds up and they settle back
+    const v = Math.abs(window.scrollY - lastY) / dt;
+    lastY = window.scrollY;
+    boost += (Math.min(v * 4, 10) - boost) * 0.15;
+    clock += (dt / 1000) * (SILK.speed + boost);
+    ptr.x += (ptr.tx - ptr.x) * 0.12;
+    ptr.y += (ptr.ty - ptr.y) * 0.12;
+    ptr.lit += (ptr.tlit - ptr.lit) * 0.08;
+    ptr.amp *= 0.94;
+    last = now;
+    draw();
   };
 
   size();
   new ResizeObserver(size).observe(canvas);
+  // The intro's pin and the page length are measured again whenever the scroll stories re-measure
+  window.addEventListener("load", () => { measure(); draw(); });
+  if (window.ScrollTrigger) ScrollTrigger.addEventListener("refresh", () => { measure(); draw(); });
   requestAnimationFrame(() => canvas.classList.add("is-on"));
-  if (reduceMotion) return;
-  hero.addEventListener("pointermove", (e) => {
-    const r = canvas.getBoundingClientRect();
-    ptr.tx = (e.clientX - r.left) / r.width;
-    ptr.ty = 1 - (e.clientY - r.top) / r.height;
-    ptr.tlit = 1;
-    ptr.amp = Math.min(1, ptr.amp + 0.08);
-  });
-  hero.addEventListener("pointerleave", () => { ptr.tx = 0.7; ptr.ty = 0.6; ptr.tlit = 0; });
-  new IntersectionObserver(([entry]) => {
-    running = entry.isIntersecting;
-    if (running && !frame) {
-      last = performance.now();
-      frame = requestAnimationFrame(loop);
-    }
-  }).observe(canvas);
+
+  if (reduceMotion) {
+    // Still frames: the satin only redraws to dim as the intro scrolls away
+    window.addEventListener("scroll", () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; draw(); }); }, { passive: true });
+    return;
+  }
+  if (hero) {
+    hero.addEventListener("pointermove", (e) => {
+      ptr.tx = e.clientX / innerWidth;
+      ptr.ty = 1 - e.clientY / innerHeight;
+      ptr.tlit = 1;
+      ptr.amp = Math.min(1, ptr.amp + 0.08);
+    });
+    hero.addEventListener("pointerleave", () => { ptr.tx = 0.7; ptr.ty = 0.6; ptr.tlit = 0; });
+  }
+  last = performance.now();
+  frame = requestAnimationFrame(loop);
 })();

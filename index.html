@@ -3,18 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sheikh Kaif – Backend &amp; Data Developer</title>
-  <meta name="description" content="Sheikh Kaif, CSE graduate in Dhaka. Laravel and SQL backends, Retool dashboards, Flutter apps and machine learning research.">
+  <title>Sheikh Kaif – Healthcare Data Developer</title>
+  <meta name="description" content="Sheikh Kaif, healthcare data developer in Dhaka. Laravel and SQL backends, Retool dashboards, machine learning research and revenue cycle training at DocPro Health.">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#000000">
+  <link rel="canonical" href="https://kaif15-14682.github.io/Personal-Portfolio/">
+  <!-- What LinkedIn and chat apps show when the link is shared -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sheikh Kaif">
+  <meta property="og:title" content="Sheikh Kaif – Healthcare Data Developer">
+  <meta property="og:description" content="Healthcare data developer in Dhaka. Laravel and SQL backends, Retool dashboards, machine learning research and revenue cycle training at DocPro Health.">
+  <meta property="og:url" content="https://kaif15-14682.github.io/Personal-Portfolio/">
+  <meta property="og:image" content="https://kaif15-14682.github.io/Personal-Portfolio/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Sheikh Kaif: I build the systems behind healthcare data.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <!-- Lets the CSS hide the headline before it animates in, so it never flashes. -->
-  <!-- The intro plays once per visit: not on a reload in the same tab, and never with reduced motion. -->
+  <!-- Quick view shows everything without the scroll stories: the top-bar button sets it for the visit, and ?quick in the link sets it for a shared link. -->
+  <!-- The intro plays once per visit: not on a reload in the same tab, and never with reduced motion or Quick view. -->
   <script>
-    document.documentElement.classList.add("js");
-    try {
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches && !sessionStorage.getItem("intro-seen")) document.documentElement.classList.add("intro-on");
-    } catch (e) {}
+    (() => {
+      const root = document.documentElement;
+      root.classList.add("js");
+      try {
+        const view = sessionStorage.getItem("view");
+        const quick = view === "quick" || (view !== "full" && new URLSearchParams(location.search).has("quick"));
+        if (quick) root.classList.add("quick");
+        if (!quick && !matchMedia("(prefers-reduced-motion: reduce)").matches && !sessionStorage.getItem("intro-seen")) root.classList.add("intro-on");
+      } catch (e) {}
+    })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +67,7 @@
       name.setAttribute("aria-label", name.textContent);
       name.innerHTML = [...name.textContent].map((c, i) => (c === " " ? " " : `<span class="ch" aria-hidden="true"><span style="--i: ${i}">${c}</span></span>`)).join("");
 
-      const MIN = 2000, MAX = 5000;
+      const MIN = 700, MAX = 5000;
       let loaded = document.readyState === "complete", shown = 0, t0 = 0, done = false;
       window.addEventListener("load", () => { loaded = true; }, { once: true });
 
@@ -65,7 +85,7 @@
         // The page's own entrance plays as the curtain lifts.
         root.classList.remove("intro-on");
         window.dispatchEvent(new Event("intro:done"));
-        setTimeout(() => intro.remove(), 1100);
+        setTimeout(() => intro.remove(), 800);
       };
       // The counter eases toward 90 on its own and only passes it once the page has loaded (or after MAX).
       const tick = (now) => {
@@ -74,10 +94,10 @@
         const t = now - t0;
         const p = Math.min(1, t / MIN);
         const goal = (1 - Math.pow(1 - p, 3)) * (loaded || t > MAX ? 100 : 90);
-        shown += (goal - shown) * 0.14;
+        shown += (goal - shown) * 0.25;
         count.textContent = String(Math.round(shown)).padStart(3, "0");
         line.style.transform = `scaleX(${(shown / 100).toFixed(3)})`;
-        if (p === 1 && shown > 99.5) { setTimeout(finish, 250); return; }
+        if (p === 1 && shown > 99.5) { setTimeout(finish, 80); return; }
         requestAnimationFrame(tick);
       };
       // Letters wait for the font, so they don't swap shape mid-rise.
@@ -106,25 +126,31 @@
     <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5a9.5 9.5 0 0 0-3 18.5c.5.1.6-.2.6-.5v-1.7c-2.6.6-3.2-1.2-3.2-1.2-.4-1.1-1-1.4-1-1.4-.9-.6 0-.6 0-.6 1 .1 1.5 1 1.5 1 .8 1.5 2.2 1 2.8.8.1-.6.3-1 .6-1.2-2.1-.2-4.3-1-4.3-4.7 0-1 .4-1.9 1-2.6-.1-.3-.4-1.2.1-2.5 0 0 .8-.3 2.6 1a9 9 0 0 1 4.8 0c1.8-1.3 2.6-1 2.6-1 .5 1.3.2 2.2.1 2.5.6.7 1 1.6 1 2.6 0 3.7-2.2 4.5-4.3 4.7.3.3.6.8.6 1.6v2.4c0 .3.2.6.7.5A9.5 9.5 0 0 0 12 2.5Z" /></symbol>
     <symbol id="i-linkedin" viewBox="0 0 24 24"><path fill="currentColor" d="M4.5 9h3v10.5h-3V9Zm1.5-5a1.75 1.75 0 1 1 0 3.5A1.75 1.75 0 0 1 6 4Zm4 5h2.9v1.5c.5-.9 1.7-1.8 3.4-1.8 3.2 0 3.7 2 3.7 4.7v6.1h-3v-5.4c0-1.3 0-2.9-1.8-2.9s-2.1 1.4-2.1 2.8v5.5H10V9Z" /></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 21s-6.5-6.1-6.5-11a6.5 6.5 0 0 1 13 0c0 4.9-6.5 11-6.5 11Zm0-8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0 4.5-4.5M12 15l-4.5-4.5M4.5 19.5h15" /></symbol>
   </svg>
 
   <header class="topbar">
     <div class="topbar__inner">
       <a class="brand" href="#about">Sheikh Kaif</a>
-      <nav class="topnav" aria-label="Sections">
+      <nav class="topnav" id="topnav" aria-label="Sections">
         <a href="#about">About</a>
         <a href="#projects">Projects</a>
-        <a href="#how">How they work</a>
-        <a href="#skills">Skills</a>
         <a href="#experience">Experience</a>
+        <a href="#skills">Skills</a>
         <a href="#education">Education</a>
+        <a href="#how">How they work</a>
         <a href="#contact">Contact</a>
       </nav>
-      <div class="icons icons--small">
-        <a class="icon-btn" href="mailto:sheikhkaif977@gmail.com" aria-label="Email Sheikh Kaif" title="Email"><svg><use href="#i-mail"/></svg></a>
-        <a class="icon-btn" href="https://github.com/kaif15-14682" rel="noopener" aria-label="GitHub profile" title="GitHub"><svg><use href="#i-github"/></svg></a>
-        <a class="icon-btn" href="https://www.linkedin.com/in/sheikh-kaif-5bb86720b" rel="noopener" aria-label="LinkedIn profile" title="LinkedIn"><svg><use href="#i-linkedin"/></svg></a>
+      <div class="topbar__end">
+        <button type="button" class="topbtn" id="quick-toggle" aria-pressed="false" title="Show everything at once, without the scroll stories">Quick view</button>
+        <a class="topbtn topbtn--cv" href="assets/Sheikh_Kaif_CV.pdf" download aria-label="Download CV"><svg aria-hidden="true"><use href="#i-down"/></svg>CV</a>
+        <div class="icons icons--small">
+          <a class="icon-btn" href="mailto:sheikhkaif977@gmail.com" aria-label="Email Sheikh Kaif" title="Email"><svg><use href="#i-mail"/></svg></a>
+          <a class="icon-btn" href="https://github.com/kaif15-14682" rel="noopener" aria-label="GitHub profile" title="GitHub"><svg><use href="#i-github"/></svg></a>
+          <a class="icon-btn" href="https://www.linkedin.com/in/sheikh-kaif-5bb86720b" rel="noopener" aria-label="LinkedIn profile" title="LinkedIn"><svg><use href="#i-linkedin"/></svg></a>
+        </div>
       </div>
+      <button type="button" class="topbtn topbtn--menu" id="menu-toggle" aria-expanded="false" aria-controls="topnav">Menu</button>
     </div>
   </header>
 
@@ -135,7 +161,7 @@
         <div class="hero__text">
           <p class="status"><span class="pulse" aria-hidden="true"></span>Now: RCM trainee at DocPro Health</p>
           <p class="hero__who">Sheikh Kaif</p>
-          <h1 id="about-title">I build the systems behind the screen: databases, dashboards and the models that make sense of them.</h1>
+          <h1 id="about-title">I build the systems behind healthcare data: databases, dashboards and the models that make sense of them.</h1>
           <p class="hero__where"><svg aria-hidden="true"><use href="#i-pin"/></svg>Dhaka, Bangladesh</p>
           <div class="icons">
             <a class="icon-btn" href="mailto:sheikhkaif977@gmail.com" aria-label="Email Sheikh Kaif" title="Email"><svg><use href="#i-mail"/></svg></a>
@@ -145,26 +171,47 @@
           </div>
         </div>
 
-        <p class="lead">
-          I'm a Computer Science &amp; Engineering graduate from Daffodil International University.
-          I've built a school management system in Laravel, Retool dashboards on top of SQL,
-          mobile apps in Flutter, and a CNN for my thesis that grades prostate cancer from tissue images.
-          Before that, I spent years explaining technical ideas as a tutor and talking to clients in sales,
-          so I'm comfortable on both sides of a project.
-        </p>
+        <!-- Hero panel: one window with a tab for each noun in the headline. The tabs take turns and the matching word lights up. -->
+        <aside class="hpanel" id="hpanel" aria-label="Running samples of my work">
+          <div class="window">
+            <div class="window__bar"><span></span><span></span><span></span><em id="hp-title">school_db · requests</em></div>
+            <div class="hp-tabs" role="group" aria-label="Choose a system">
+              <button type="button" aria-pressed="true">databases</button>
+              <button type="button" aria-pressed="false">dashboards</button>
+              <button type="button" aria-pressed="false">models</button>
+            </div>
+            <div class="hp-panes">
+              <div class="hp-pane" data-pane="db"><ol class="log" id="hp-log" aria-hidden="true"></ol></div>
+              <div class="hp-pane" data-pane="dash" hidden>
+                <div class="hp-dash">
+                  <div class="hp-kpis">
+                    <div><span>Open tasks</span><b id="hp-open">128</b><small>−12</small></div>
+                    <div><span>Reports sent</span><b id="hp-sent">42</b><small>+6</small></div>
+                  </div>
+                  <ol class="hp-bars" aria-hidden="true"><li style="--i: 0"><b><i style="--h: 48%"></i></b><span>Mon</span></li><li style="--i: 1"><b><i style="--h: 72%"></i></b><span>Tue</span></li><li style="--i: 2"><b><i style="--h: 60%"></i></b><span>Wed</span></li><li style="--i: 3"><b><i style="--h: 88%"></i></b><span>Thu</span></li><li style="--i: 4"><b><i style="--h: 66%"></i></b><span>Fri</span></li><li style="--i: 5"><b><i style="--h: 34%"></i></b><span>Sat</span></li><li style="--i: 6"><b><i style="--h: 22%"></i></b><span>Sun</span></li></ol>
+                </div>
+              </div>
+              <div class="hp-pane" data-pane="model" hidden>
+                <div class="hp-model"><div id="hp-chart"></div><p class="hp-read" id="hp-read"></p></div>
+              </div>
+            </div>
+            <a class="hp-foot" id="hp-foot" href="#p-school"><span id="hp-name">School management system</span><small id="hp-note">sample traffic</small><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
+          </div>
+        </aside>
 
-        <dl class="glance">
-          <div><dt>Degree</dt><dd><strong>BSc in CSE</strong>Daffodil International University, 2025</dd></div>
-          <div><dt>Projects</dt><dd><strong>6 projects</strong>Web, data, mobile, ML and CLI</dd></div>
-          <div><dt>Thesis result</dt><dd><strong>99.83%</strong>Test accuracy on six cancer grades</dd></div>
-          <div><dt>Communication</dt><dd><strong>6 years</strong>Tutoring, plus client-facing sales</dd></div>
-        </dl>
+        <p class="lead">
+          I'm a Computer Science &amp; Engineering graduate from Daffodil International University,
+          now training in revenue cycle management at DocPro Health.
+          I've built a CNN that grades prostate cancer from tissue images, a stroke risk model,
+          a school system in Laravel and Retool dashboards on SQL.
+          Years of tutoring and client calls mean I'm comfortable on both sides of a project.
+        </p>
       </section>
 
       <!-- Highlights: one number per project. Each tile jumps to its project. -->
       <section id="highlights" class="highlights bleed" aria-labelledby="highlights-title">
         <div class="highlights__inner">
-          <h2 id="highlights-title" class="highlights__title">Six projects, one number each</h2>
+          <h2 id="highlights-title" class="highlights__title">Six projects at a glance</h2>
           <ul class="hl">
             <li><a class="hl__tile" href="#p-school"><span class="tag">Web &amp; backend<span class="hl__year"> · 2024</span></span><b class="hl__stat">5</b><span class="hl__label">record modules, each behind role-based permissions</span><span class="hl__title">School management system</span></a></li>
             <li><a class="hl__tile" href="#p-retool"><span class="tag">Data<span class="hl__year"> · 2026</span></span><b class="hl__stat">SQL <span class="hl__arrow">→</span> <span class="hl__to">Retool</span></b><span class="hl__label">live dashboards and automated workflows</span><span class="hl__title">Operations dashboards</span></a></li>
@@ -181,16 +228,7 @@
         <div class="block__head">
 <p class="idx" aria-hidden="true"><span>01</span><i></i></p>
           <h2 id="projects-title">Projects</h2>
-          <p>Each one shows what I built and how it works. Open a case study for the full story.</p>
-        </div>
-
-        <div class="filters" role="group" aria-label="Filter projects">
-          <button type="button" data-filter="all" aria-pressed="true">All</button>
-          <button type="button" data-filter="web" aria-pressed="false">Web &amp; backend</button>
-          <button type="button" data-filter="data" aria-pressed="false">Data</button>
-          <button type="button" data-filter="ml" aria-pressed="false">Machine learning</button>
-          <button type="button" data-filter="mobile" aria-pressed="false">Mobile</button>
-          <button type="button" data-filter="tools" aria-pressed="false">Tools</button>
+          <p>Each one shows what I built and how it works. The three biggest have a 20-second case study you can watch.</p>
         </div>
 
         <div class="strip" id="strip">
@@ -209,7 +247,7 @@
             </ul>
             <ul class="stack"><li>Laravel</li><li>PHP</li><li>MySQL</li><li>Blade</li><li>Tailwind CSS</li></ul>
             <p class="project__links">
-              <button type="button" class="btn btn--primary" data-case="school">Case study</button>
+              <button type="button" class="btn btn--primary btn--watch" data-case="school"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.4v11.2L13.4 8z"/></svg>Watch the case study<small>20 s</small></button>
               <a class="btn btn--ghost" href="https://github.com/kaif15-14682/School_Management_system_Laravel" rel="noopener">View code on GitHub</a>
             </p>
           </div>
@@ -249,7 +287,7 @@
               <li>Automated operational workflows so routine steps run on their own.</li>
             </ul>
             <ul class="stack"><li>Retool</li><li>SQL</li></ul>
-            <p class="project__links"><button type="button" class="btn btn--primary" data-case="retool">Case study</button></p>
+            <p class="project__links"><button type="button" class="btn btn--primary btn--watch" data-case="retool"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.4v11.2L13.4 8z"/></svg>Watch the case study<small>20 s</small></button></p>
             <p class="project__note">Internal work, so the code isn't public.</p>
           </div>
           <figure class="project__visual">
@@ -266,18 +304,19 @@
             <p>My bachelor's thesis. A CNN that sorts tissue images into the six ISUP cancer grades, built to help pathologists grade faster and more consistently.</p>
             <ul class="did">
               <li>Cleaned 10,616 images and grew the set to 53,080 with augmentation.</li>
-              <li>Tuned the network through a 10-step ablation study, from 96.07% to 99.83% test accuracy.</li>
+              <li>Tuned the network through a 10-step ablation study, one setting at a time, from 96.07% to 99.83% test accuracy.</li>
               <li>Beat five pretrained models and checked it with 5-fold cross-validation (97.28% to 98.37%).</li>
             </ul>
             <ul class="stack"><li>Python</li><li>TensorFlow</li><li>Keras</li><li>OpenCV</li><li>Google Colab</li></ul>
-            <p class="project__links"><button type="button" class="btn btn--primary" data-case="prostadenet">Case study</button></p>
+            <p class="project__links"><button type="button" class="btn btn--primary btn--watch" data-case="prostadenet"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.4v11.2L13.4 8z"/></svg>Watch the case study<small>20 s</small></button></p>
             <p class="project__note">Supervised by Ms. Nazmun Nessa Moon. Full report available on request.</p>
           </div>
           <figure class="project__visual">
             <div class="tabs" role="tablist" aria-label="ProstadeNet results">
-              <button type="button" role="tab" id="tab-ablation" aria-controls="pane-ablation" aria-selected="true">Ablation study</button>
-              <button type="button" role="tab" id="tab-models" aria-controls="pane-models" aria-selected="false" tabindex="-1">Against other models</button>
-              <button type="button" role="tab" id="tab-pipeline" aria-controls="pane-pipeline" aria-selected="false" tabindex="-1">Image pipeline</button>
+              <button type="button" role="tab" id="tab-ablation" aria-controls="pane-ablation" aria-selected="true">Tuning</button>
+              <button type="button" role="tab" id="tab-models" aria-controls="pane-models" aria-selected="false" tabindex="-1">Other models</button>
+              <button type="button" role="tab" id="tab-metrics" aria-controls="pane-metrics" aria-selected="false" tabindex="-1">Beyond accuracy</button>
+              <button type="button" role="tab" id="tab-pipeline" aria-controls="pane-pipeline" aria-selected="false" tabindex="-1">Pipeline</button>
             </div>
 
             <div class="pane" role="tabpanel" id="pane-ablation" aria-labelledby="tab-ablation">
@@ -296,6 +335,24 @@
                 <li style="--v: 90.21"><span>InceptionV3</span><b><i></i></b><em>90.21%</em></li>
               </ul>
               <p class="pane__note">Test accuracy on the same data. Bars start at 85% so the gaps are visible.</p>
+            </div>
+
+            <div class="pane" role="tabpanel" id="pane-metrics" aria-labelledby="tab-metrics" hidden>
+              <dl class="metrics">
+                <div><dt>Precision</dt><dd>99.69%</dd></div>
+                <div><dt>Recall</dt><dd>99.69%</dd></div>
+                <div><dt>F1 score</dt><dd>99.69%</dd></div>
+                <div><dt>Specificity</dt><dd>99.93%</dd></div>
+              </dl>
+              <p class="metrics__title">Test accuracy across five folds</p>
+              <ul class="bars bars--folds" aria-label="Test accuracy in each of the five cross-validation folds">
+                <li style="--v: 97.28"><span>Fold 1</span><b><i></i></b><em>97.28%</em></li>
+                <li style="--v: 97.30"><span>Fold 2</span><b><i></i></b><em>97.30%</em></li>
+                <li style="--v: 97.34"><span>Fold 3</span><b><i></i></b><em>97.34%</em></li>
+                <li style="--v: 97.35"><span>Fold 4</span><b><i></i></b><em>97.35%</em></li>
+                <li style="--v: 98.37"><span>Fold 5</span><b><i></i></b><em>98.37%</em></li>
+              </ul>
+              <p class="pane__note">From the thesis: test metrics for the final model and its 5-fold results. Bars start at 85%.</p>
             </div>
 
             <div class="pane" role="tabpanel" id="pane-pipeline" aria-labelledby="tab-pipeline" hidden>
@@ -327,7 +384,7 @@
               <li><a href="https://github.com/kaif15-14682/Combined_App_Flutter" rel="noopener">Combined app</a>: login, profile, blog editor, calculator and quiz in one.</li>
             </ul>
             <ul class="stack"><li>Flutter</li><li>Dart</li><li>REST APIs</li></ul>
-            <p class="project__links"><button type="button" class="btn btn--primary" data-case="flutter">Case study</button></p>
+            <p class="project__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Combined_App_Flutter" rel="noopener">View code on GitHub</a></p>
           </div>
           <figure class="project__visual">
             <div class="phones" id="phones" aria-hidden="true">
@@ -378,7 +435,7 @@
             </ul>
             <ul class="stack"><li>Python</li><li>pandas</li><li>scikit-learn</li><li>Jupyter</li></ul>
             <p class="project__links">
-              <button type="button" class="btn btn--primary" data-case="stroke">Case study</button>
+              <a class="btn btn--primary" href="#deep-stroke">See why accuracy misleads</a>
               <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" rel="noopener">View code on GitHub</a>
             </p>
           </div>
@@ -411,10 +468,7 @@
               <li>Keeps the store in a private folder with owner-only file permissions.</li>
             </ul>
             <ul class="stack"><li>Bash</li><li>OpenSSL</li><li>Linux</li></ul>
-            <p class="project__links">
-              <button type="button" class="btn btn--primary" data-case="password">Case study</button>
-              <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a>
-            </p>
+            <p class="project__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a></p>
           </div>
           <figure class="project__visual">
             <div class="window window--term">
@@ -441,15 +495,141 @@ Password added for github.</code></pre>
         </article>
 
         </div>
+        <p class="strip__count" aria-hidden="true"><b id="strip-n">1</b> / 6</p>
         </div>
+      </section>
 
-        <p class="empty" id="empty" hidden>No projects in this category. <button type="button" class="linkish" data-filter="all">Show all projects</button></p>
+      <!-- Experience -->
+      <section id="experience" class="block" aria-labelledby="experience-title">
+        <div class="block__head">
+<p class="idx" aria-hidden="true"><span>02</span><i></i></p>
+          <h2 id="experience-title">Experience</h2>
+        </div>
+        <div class="tl" id="tl">
+          <div class="tl__year" aria-hidden="true"><span id="tl-year">2026</span><small id="tl-label">RCM training at DocPro Health</small></div>
+          <ol class="timeline">
+            <li id="x-docpro" class="has-cycle">
+              <div>
+                <p class="timeline__when">Oct 2026 – Present</p>
+                <h3>Revenue Cycle Management (RCM) Trainee</h3>
+                <p class="timeline__where">DocPro Health Inc</p>
+                <ul>
+                  <li>Training across the full revenue cycle, from patient intake to the final payment on a claim.</li>
+                  <li>Verifying patient demographics and insurance eligibility before a claim goes out.</li>
+                  <li>Coding procedures and diagnoses with CPT and ICD-10-CM, linking each procedure to the diagnosis that supports it.</li>
+                  <li>Submitting claims, posting payments, and working accounts receivable and denials through to resolution.</li>
+                </ul>
+                <a class="timeline__more" href="#deep-claim">Follow one claim through the cycle</a>
+              </div>
+              <div class="cycle" id="cycle" role="img" aria-label="The revenue cycle in six stages: demographics, eligibility, coding, claim submission, payment posting, and AR and denial management.">
+                <svg id="cycle-svg" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+                <p class="cycle__mid" aria-hidden="true"><small id="cy-n">6 stages</small><b id="cy-t">Revenue cycle</b></p>
+              </div>
+            </li>
+            <li>
+              <p class="timeline__when">May 2026</p>
+              <h3>Workflow Automation &amp; Dashboard Development</h3>
+              <p class="timeline__where">Retool and SQL</p>
+              <ul>
+                <li>Built and deployed interactive dashboards and automated operational workflows.</li>
+                <li>Made data visualisation and process tracking simpler for reporting and task management.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">2024 – 2025</p>
+              <h3>Undergraduate Researcher</h3>
+              <p class="timeline__where">Daffodil International University</p>
+              <ul>
+                <li>Designed and tuned ProstadeNet, a CNN for six-grade prostate cancer classification.</li>
+                <li>Benchmarked it against VGG16, VGG19, MobileNet, MobileNetV2 and InceptionV3.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">Apr – Jun 2024</p>
+              <h3>Sales Development Representative</h3>
+              <p class="timeline__where">Santuary Limited</p>
+              <ul>
+                <li>Made high-volume outbound calls and handled client conversations professionally.</li>
+                <li>Identified customer needs through clear, persuasive dialogue.</li>
+                <li>Met outreach targets consistently in a fast-paced, feedback-driven team.</li>
+              </ul>
+            </li>
+            <li>
+              <p class="timeline__when">2019 – 2025</p>
+              <h3>Private Tutor</h3>
+              <p class="timeline__where">Caretutors</p>
+              <ul>
+                <li>Taught students one to one and explained complex technical concepts clearly.</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Skills map -->
+      <section id="skills" class="block" aria-labelledby="skills-title">
+        <div class="block__head">
+<p class="idx" aria-hidden="true"><span>03</span><i></i></p>
+          <h2 id="skills-title">Skills, and where I used them</h2>
+          <p>Every skill below maps to a project or role on this page.<span class="hover-hint"> Hover or focus one to see its connections.</span></p>
+        </div>
+        <div class="skills-map"><svg id="skills-svg" class="skills-svg" viewBox="0 0 720 545" aria-hidden="true"></svg></div>
+        <!-- The same data as a table: read out by screen readers, and shown instead of the map on phones and without JavaScript -->
+        <div class="skills-table">
+          <table>
+            <caption>Skills by project</caption>
+            <thead>
+              <tr><th scope="col">Skill</th><th scope="col">Projects</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">SQL &amp; MySQL</th><td>School system, Dashboards</td></tr>
+              <tr><th scope="row">PHP &amp; Laravel</th><td>School system</td></tr>
+              <tr><th scope="row">Retool</th><td>Dashboards</td></tr>
+              <tr><th scope="row">HTML, CSS &amp; Tailwind</th><td>School system</td></tr>
+              <tr><th scope="row">Python</th><td>ProstadeNet, Stroke ML</td></tr>
+              <tr><th scope="row">TensorFlow &amp; Keras</th><td>ProstadeNet</td></tr>
+              <tr><th scope="row">OpenCV</th><td>ProstadeNet</td></tr>
+              <tr><th scope="row">scikit-learn &amp; pandas</th><td>Stroke ML</td></tr>
+              <tr><th scope="row">Flutter &amp; Dart</th><td>Flutter apps</td></tr>
+              <tr><th scope="row">REST APIs</th><td>Flutter apps</td></tr>
+              <tr><th scope="row">Bash &amp; Linux</th><td>Password CLI</td></tr>
+              <tr><th scope="row">Git &amp; GitHub</th><td>School system, Flutter apps, Stroke ML, Password CLI</td></tr>
+              <tr><th scope="row">CPT &amp; ICD-10-CM coding</th><td>DocPro Health (RCM)</td></tr>
+              <tr><th scope="row">Claims, AR &amp; denials</th><td>DocPro Health (RCM)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="soft-skills"><strong>Also:</strong> client communication, explaining technical ideas, attention to detail with data and IT troubleshooting.</p>
+      </section>
+
+      <!-- Education -->
+      <section id="education" class="block" aria-labelledby="education-title">
+        <div class="block__head">
+<p class="idx" aria-hidden="true"><span>04</span><i></i></p>
+          <h2 id="education-title">Education &amp; achievements</h2>
+        </div>
+        <div class="edu">
+          <div class="edu__card">
+            <svg class="edu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9 12 4.5 21.5 9 12 13.5 2.5 9Zm4 2.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3M21.5 9v5" /></svg>
+            <h3>BSc in Computer Science &amp; Engineering</h3>
+            <p>Daffodil International University, 2021 – 2025</p>
+            <p class="edu__note">Thesis: ProstadeNet, presented 14 May 2025.</p>
+          </div>
+          <div class="edu__card">
+            <svg class="edu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Zm0 1.5H4v1a3.5 3.5 0 0 0 3.3 3.5M17 5.5h3v1a3.5 3.5 0 0 1-3.3 3.5M12 13v4m-3.5 3h7" /></svg>
+            <h3>Competitions</h3>
+            <ul class="awards">
+              <li><b>HULT Prize</b><span>Business competition, 2023</span></li>
+              <li><b>Takeoff Programming Contest</b><span>Competed in 2021, 2023 and 2024</span></li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       <!-- How they work: three scroll stories -->
       <section id="how" class="block" aria-labelledby="how-title">
         <div class="block__head">
-<p class="idx" aria-hidden="true"><span>02</span><i></i></p>
+<p class="idx" aria-hidden="true"><span>05</span><i></i></p>
           <h2 id="how-title">How they work</h2>
           <p>Three projects and the claim process from my current role, taken apart. Scroll through each one.</p>
         </div>
@@ -633,143 +813,19 @@ Password added for github.</code></pre>
         </article>
       </section>
 
-      <!-- Skills map -->
-      <section id="skills" class="block" aria-labelledby="skills-title">
-        <div class="block__head">
-<p class="idx" aria-hidden="true"><span>03</span><i></i></p>
-          <h2 id="skills-title">Skills, and where I used them</h2>
-          <p>Every skill below maps to a project or role on this page. Hover or focus one to see its connections.</p>
-        </div>
-        <div class="skills-map"><svg id="skills-svg" class="skills-svg" viewBox="0 0 720 545" aria-hidden="true"></svg></div>
-        <!-- The same data as a table, for screen readers -->
-        <div class="sr-only">
-          <table>
-            <caption>Skills by project</caption>
-            <thead>
-              <tr><th scope="col">Skill</th><th scope="col">Projects</th></tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row">SQL &amp; MySQL</th><td>School system, Dashboards</td></tr>
-              <tr><th scope="row">PHP &amp; Laravel</th><td>School system</td></tr>
-              <tr><th scope="row">Retool</th><td>Dashboards</td></tr>
-              <tr><th scope="row">HTML, CSS &amp; Tailwind</th><td>School system</td></tr>
-              <tr><th scope="row">Python</th><td>ProstadeNet, Stroke ML</td></tr>
-              <tr><th scope="row">TensorFlow &amp; Keras</th><td>ProstadeNet</td></tr>
-              <tr><th scope="row">OpenCV</th><td>ProstadeNet</td></tr>
-              <tr><th scope="row">scikit-learn &amp; pandas</th><td>Stroke ML</td></tr>
-              <tr><th scope="row">Flutter &amp; Dart</th><td>Flutter apps</td></tr>
-              <tr><th scope="row">REST APIs</th><td>Flutter apps</td></tr>
-              <tr><th scope="row">Bash &amp; Linux</th><td>Password CLI</td></tr>
-              <tr><th scope="row">Git &amp; GitHub</th><td>School system, Flutter apps, Stroke ML, Password CLI</td></tr>
-              <tr><th scope="row">CPT &amp; ICD-10-CM coding</th><td>DocPro Health (RCM)</td></tr>
-              <tr><th scope="row">Claims, AR &amp; denials</th><td>DocPro Health (RCM)</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="soft-skills"><strong>Also:</strong> client communication, explaining technical ideas, attention to detail with data and IT troubleshooting.</p>
-      </section>
-
-      <!-- Experience -->
-      <section id="experience" class="block" aria-labelledby="experience-title">
-        <div class="block__head">
-<p class="idx" aria-hidden="true"><span>04</span><i></i></p>
-          <h2 id="experience-title">Experience</h2>
-        </div>
-        <div class="tl" id="tl">
-          <div class="tl__year" aria-hidden="true"><span id="tl-year">2026</span><small id="tl-label">RCM training at DocPro Health</small></div>
-          <ol class="timeline">
-            <li id="x-docpro" class="has-cycle">
-              <div>
-                <p class="timeline__when">Oct 2026 – Present</p>
-                <h3>Revenue Cycle Management (RCM) Trainee</h3>
-                <p class="timeline__where">DocPro Health Inc</p>
-                <ul>
-                  <li>Training across the full revenue cycle, from patient intake to the final payment on a claim.</li>
-                  <li>Verifying patient demographics and insurance eligibility before a claim goes out.</li>
-                  <li>Coding procedures and diagnoses with CPT and ICD-10-CM, linking each procedure to the diagnosis that supports it.</li>
-                  <li>Submitting claims, posting payments, and working accounts receivable and denials through to resolution.</li>
-                </ul>
-                <a class="timeline__more" href="#deep-claim">Follow one claim through the cycle</a>
-              </div>
-              <div class="cycle" id="cycle" role="img" aria-label="The revenue cycle in six stages: demographics, eligibility, coding, claim submission, payment posting, and AR and denial management.">
-                <svg id="cycle-svg" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
-                <p class="cycle__mid" aria-hidden="true"><small id="cy-n">6 stages</small><b id="cy-t">Revenue cycle</b></p>
-              </div>
-            </li>
-            <li>
-              <p class="timeline__when">May 2026</p>
-              <h3>Workflow Automation &amp; Dashboard Development</h3>
-              <p class="timeline__where">Retool and SQL</p>
-              <ul>
-                <li>Built and deployed interactive dashboards and automated operational workflows.</li>
-                <li>Made data visualisation and process tracking simpler for reporting and task management.</li>
-              </ul>
-            </li>
-            <li>
-              <p class="timeline__when">2024 – 2025</p>
-              <h3>Undergraduate Researcher</h3>
-              <p class="timeline__where">Daffodil International University</p>
-              <ul>
-                <li>Designed and tuned ProstadeNet, a CNN for six-grade prostate cancer classification.</li>
-                <li>Benchmarked it against VGG16, VGG19, MobileNet, MobileNetV2 and InceptionV3.</li>
-              </ul>
-            </li>
-            <li>
-              <p class="timeline__when">Apr – Jun 2024</p>
-              <h3>Sales Development Representative</h3>
-              <p class="timeline__where">Santuary Limited</p>
-              <ul>
-                <li>Made high-volume outbound calls and handled client conversations professionally.</li>
-                <li>Identified customer needs through clear, persuasive dialogue.</li>
-                <li>Met outreach targets consistently in a fast-paced, feedback-driven team.</li>
-              </ul>
-            </li>
-            <li>
-              <p class="timeline__when">2019 – 2025</p>
-              <h3>Private Tutor</h3>
-              <p class="timeline__where">Caretutors</p>
-              <ul>
-                <li>Taught students one to one and explained complex technical concepts clearly.</li>
-              </ul>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <!-- Education -->
-      <section id="education" class="block" aria-labelledby="education-title">
-        <div class="block__head">
-<p class="idx" aria-hidden="true"><span>05</span><i></i></p>
-          <h2 id="education-title">Education &amp; achievements</h2>
-        </div>
-        <div class="edu">
-          <div class="edu__card">
-            <svg class="edu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9 12 4.5 21.5 9 12 13.5 2.5 9Zm4 2.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3M21.5 9v5" /></svg>
-            <h3>BSc in Computer Science &amp; Engineering</h3>
-            <p>Daffodil International University, 2021 – 2025</p>
-            <p class="edu__note">Thesis: ProstadeNet, presented 14 May 2025.</p>
-          </div>
-          <div class="edu__card">
-            <svg class="edu__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Zm0 1.5H4v1a3.5 3.5 0 0 0 3.3 3.5M17 5.5h3v1a3.5 3.5 0 0 1-3.3 3.5M12 13v4m-3.5 3h7" /></svg>
-            <h3>Competitions</h3>
-            <ul class="awards">
-              <li><b>HULT Prize</b><span>Business competition, 2023</span></li>
-              <li><b>Takeoff Programming Contest</b><span>Competed in 2021, 2023 and 2024</span></li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
       <!-- Contact -->
       <section id="contact" class="contact" aria-labelledby="contact-title">
-        <p class="contact__kicker">Looking for a backend, data or ML developer?</p>
+        <p class="contact__kicker">Looking for a developer who understands healthcare data?</p>
         <h2 id="contact-title" class="contact__big">Let's build something.</h2>
         <p>I'm open to talking about new work, and I reply to every email. References are available on request.</p>
         <div class="contact__row">
           <a class="btn btn--light" href="mailto:sheikhkaif977@gmail.com"><svg aria-hidden="true"><use href="#i-mail"/></svg>Email me</a>
+          <a class="btn btn--outline-light" href="assets/Sheikh_Kaif_CV.pdf" download><svg aria-hidden="true"><use href="#i-down"/></svg>Download CV</a>
           <button type="button" class="btn btn--outline-light" id="copy-email" data-email="sheikhkaif977@gmail.com">Copy email address</button>
-          <a class="icon-btn icon-btn--dark" href="https://github.com/kaif15-14682" rel="noopener" aria-label="GitHub profile" title="GitHub"><svg><use href="#i-github"/></svg></a>
-          <a class="icon-btn icon-btn--dark" href="https://www.linkedin.com/in/sheikh-kaif-5bb86720b" rel="noopener" aria-label="LinkedIn profile" title="LinkedIn"><svg><use href="#i-linkedin"/></svg></a>
+          <span class="contact__icons">
+            <a class="icon-btn icon-btn--dark" href="https://github.com/kaif15-14682" rel="noopener" aria-label="GitHub profile" title="GitHub"><svg><use href="#i-github"/></svg></a>
+            <a class="icon-btn icon-btn--dark" href="https://www.linkedin.com/in/sheikh-kaif-5bb86720b" rel="noopener" aria-label="LinkedIn profile" title="LinkedIn"><svg><use href="#i-linkedin"/></svg></a>
+          </span>
           <span class="copy-status" id="copy-status" aria-live="polite"></span>
         </div>
       </section>
@@ -785,7 +841,103 @@ Password added for github.</code></pre>
     <div class="case-content" data-case="school">
       <p class="project__meta"><span class="tag">Web &amp; backend</span>2024</p>
       <h3 class="case__title">School management system</h3>
-      <p>A Laravel web app that runs a school's day-to-day records: classes, subjects, teachers, students and parents, with attendance and grades on top. Every page sits behind role-based permissions that admins manage from inside the app.</p>
+      <section class="reel" data-reel aria-label="The case study in four scenes">
+        <div class="reel__top">
+          <div class="reel__chapters">
+            <button type="button" class="reel__ch"><i><b></b></i><span>The app</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>Daily work</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>Access</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>Under the hood</span></button>
+          </div>
+          <button type="button" class="reel__play" data-state="playing" aria-label="Pause"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="i-pause" fill="currentColor" d="M4 2.5h2.6v11H4zm5.4 0H12v11H9.4z"/><path class="i-play" fill="currentColor" d="M4.5 2.4v11.2L13.4 8z"/><g class="i-again" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M4.2 1.6v2.8H7"/></g></svg></button>
+        </div>
+        <div class="reel__stage">
+          <div class="scene is-on" data-scene="sc-app">
+            <div class="scene__text">
+              <p class="scene__big">One app</p>
+              <p class="scene__line">for a school's day-to-day records: classes, subjects, teachers, students and parents.</p>
+              <p class="scene__note">Sample data</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="window sapp">
+                <div class="window__bar"><span></span><span></span><span></span><em>school · admin</em></div>
+                <div class="sapp__body">
+                  <ul class="sapp__nav"><li>Classes</li><li>Subjects</li><li>Teachers</li><li>Students</li><li class="is-on">Parents</li></ul>
+                  <div class="sapp__main">
+                    <p class="sapp__h">Parents</p>
+                    <ul class="sapp__rows">
+                      <li><b>Mahbub Rahman</b><span>Ayesha's father</span></li>
+                      <li><b>Rokeya Hasan</b><span>Tanvir's mother</span></li>
+                      <li><b>Selina Jahan</b><span>Nusrat's mother</span></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="sc-day">
+            <div class="scene__text">
+              <p class="scene__big">Every day</p>
+              <p class="scene__line">Attendance is taken class by class, with grade records and subjects assigned to each class.</p>
+              <p class="scene__note">Sample data</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="window att">
+                <div class="window__bar"><span></span><span></span><span></span><em>attendance-create/7</em></div>
+                <p class="att__h">Attendance · Class 7 <span class="att__save">Save</span></p>
+                <ul class="att__rows">
+                  <li><span>Ayesha Rahman</span><em>Present</em></li>
+                  <li><span>Tanvir Hasan</span><em>Present</em></li>
+                  <li><span>Nusrat Jahan</span><em class="no">Absent</em></li>
+                  <li><span>Rafiul Islam</span><em>Present</em></li>
+                  <li><span>Sadia Akter</span><em>Present</em></li>
+                </ul>
+                <p class="att__toast">Saved: 4 present, 1 absent</p>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="sc-access">
+            <div class="scene__text">
+              <p class="scene__big">Right access</p>
+              <p class="scene__line">Every page checks the user's role, and admins set who can do what from inside the app.</p>
+              <p class="scene__note">Sample roles</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="window perm">
+                <div class="window__bar"><span></span><span></span><span></span><em>roles-permissions</em></div>
+                <table class="perm__t">
+                  <thead><tr><th></th><th>Admin</th><th>Teacher</th></tr></thead>
+                  <tbody>
+                    <tr><th>Manage classes</th><td><i class="on"></i></td><td><i></i></td></tr>
+                    <tr><th>Take attendance</th><td><i class="on"></i></td><td><i class="on"></i></td></tr>
+                    <tr><th>Enter grades</th><td><i class="on"></i></td><td><i class="on"></i></td></tr>
+                    <tr><th>Manage roles</th><td><i class="on"></i></td><td><i></i></td></tr>
+                  </tbody>
+                </table>
+                <p class="perm__req"><span>Teacher opens <code>/roles-permissions</code></span><em>Blocked</em></p>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="sc-stack">
+            <div class="scene__text">
+              <p class="scene__big">Four layers</p>
+              <p class="scene__line">Built in Laravel and PHP on MySQL, from the screen through routes and models down to the database.</p>
+              <p class="scene__note">Run a real query on sample data below</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="lyr">
+                <div class="lyr__l"><b>Screen</b><span>Blade · Tailwind CSS</span></div>
+                <div class="lyr__l"><b>Routes</b><span>role and permission check</span></div>
+                <div class="lyr__l"><b>Controllers · models</b><span>Laravel · Eloquent</span></div>
+                <div class="lyr__l"><b>Database</b><span>MySQL</span></div>
+                <i class="lyr__dot"></i>
+              </div>
+              <p class="lyr__msg"><code>GET attendance-create/7</code><em>200 OK</em></p>
+            </div>
+          </div>
+        </div>
+      </section>
+      <p class="sr-only">A Laravel web app that runs a school's day-to-day records: classes, subjects, teachers, students and parents, with attendance and grades on top. Every page sits behind role-based permissions that admins manage from inside the app.</p>
       <h4>Query the database</h4>
       <p class="case__hint">Pick a query to run it against sample data shaped like the app's tables.</p>
       <div class="qc" id="qc">
@@ -810,9 +962,111 @@ Password added for github.</code></pre>
     <div class="case-content" data-case="retool">
       <p class="project__meta"><span class="tag">Data</span>2026</p>
       <h3 class="case__title">Operations dashboards in Retool</h3>
-      <p>Interactive dashboards and automated workflows built on SQL, so a team can see its numbers at a glance and routine steps run on their own. The work is internal, so the dashboard below is a sample built to show the idea.</p>
+      <section class="reel" data-reel aria-label="The case study in four scenes">
+        <div class="reel__top">
+          <div class="reel__chapters">
+            <button type="button" class="reel__ch"><i><b></b></i><span>The data</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>The queries</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>The dashboard</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>Automation</span></button>
+          </div>
+          <button type="button" class="reel__play" data-state="playing" aria-label="Pause"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="i-pause" fill="currentColor" d="M4 2.5h2.6v11H4zm5.4 0H12v11H9.4z"/><path class="i-play" fill="currentColor" d="M4.5 2.4v11.2L13.4 8z"/><g class="i-again" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M4.2 1.6v2.8H7"/></g></svg></button>
+        </div>
+        <div class="reel__stage">
+          <div class="scene is-on" data-scene="rt-data">
+            <div class="scene__text">
+              <p class="scene__big">Rows</p>
+              <p class="scene__line">The team's tasks and reports are stored as rows in SQL tables.</p>
+              <p class="scene__note">Sample data. The real work is internal.</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="tbls">
+                <div class="window tbl">
+                  <div class="window__bar"><span></span><span></span><span></span><em>tasks</em></div>
+                  <table>
+                    <colgroup><col class="n"><col><col class="s"></colgroup>
+                    <tr><th>id</th><th>title</th><th>status</th></tr>
+                    <tr><td>1281</td><td>Restock fridge</td><td><mark>open</mark></td></tr>
+                    <tr><td>1280</td><td>Fix till 3</td><td>resolved</td></tr>
+                    <tr><td>1279</td><td>New price tags</td><td><mark>open</mark></td></tr>
+                    <tr><td>1278</td><td>Order receipts</td><td><mark>open</mark></td></tr>
+                  </table>
+                </div>
+                <div class="window tbl">
+                  <div class="window__bar"><span></span><span></span><span></span><em>reports</em></div>
+                  <table>
+                    <colgroup><col><col class="n"><col class="n"></colgroup>
+                    <tr><th>title</th><th>due</th><th>sent</th></tr>
+                    <tr><td>Weekly stock count</td><td>Mon</td><td>–</td></tr>
+                    <tr><td>Vendor invoices</td><td>Tue</td><td>–</td></tr>
+                    <tr><td>Shift handover log</td><td>Tue</td><td>–</td></tr>
+                    <tr><td>Daily sales</td><td>Wed</td><td>Wed</td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="rt-query">
+            <div class="scene__text">
+              <p class="scene__big">Numbers</p>
+              <p class="scene__line">SQL queries pull and shape the number behind every widget.</p>
+              <p class="scene__note">Sample query</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="sq">
+<pre class="sq__code"><span class="ln"><span class="k">SELECT</span> <span class="f">COUNT</span>(*)</span>
+<span class="ln"><span class="k">FROM</span> tasks</span>
+<span class="ln"><span class="k">WHERE</span> status = <span class="s">'open'</span>;</span></pre>
+                <svg class="sq__arrow" viewBox="0 0 44 16"><path pathLength="1" d="M2 8h38m-7-6 7 6-7 6"/></svg>
+                <div class="sq__out"><span>Open tasks</span><b data-count="128">128</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="rt-dash">
+            <div class="scene__text">
+              <p class="scene__big">One screen</p>
+              <p class="scene__line">Retool turns those queries into a dashboard the team can track at a glance.</p>
+              <p class="scene__note">Sample dashboard</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="window mini">
+                <div class="window__bar"><span></span><span></span><span></span><em>ops_dashboard · Retool</em></div>
+                <div class="mini__kpis">
+                  <div><span>Open tasks</span><b data-count="128">128</b></div>
+                  <div><span>Reports sent</span><b data-count="42">42</b></div>
+                  <div><span>Avg. time to resolve</span><b data-count="3.4" data-dec="1" data-unit=" h">3.4 h</b></div>
+                </div>
+                <div class="mini__chart"><i style="--h: 48%"></i><i style="--h: 72%"></i><i style="--h: 60%"></i><i style="--h: 88%"></i><i style="--h: 66%"></i><i style="--h: 34%"></i><i style="--h: 22%"></i></div>
+                <p class="mini__cap">Tasks created per day, this week</p>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="rt-auto">
+            <div class="scene__text">
+              <p class="scene__big">On its own</p>
+              <p class="scene__line">Workflows handle the routine steps. A late report sends its owner a reminder, so no one has to chase it.</p>
+              <p class="scene__note">Sample workflow</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="wf">
+                <ol class="wf__flow">
+                  <li><b>Find late reports</b><span>SQL query</span></li>
+                  <li><b>Look up the owner</b><span>for each report</span></li>
+                  <li><b>Send a reminder</b><span>workflow step</span></li>
+                </ol>
+                <ul class="wf__sent">
+                  <li><b>Weekly stock count</b><span>2 days late</span><em>Reminder sent</em></li>
+                  <li><b>Vendor invoices</b><span>1 day late</span><em>Reminder sent</em></li>
+                  <li><b>Shift handover log</b><span>1 day late</span><em>Reminder sent</em></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <p class="sr-only">Interactive dashboards and automated workflows built on SQL, so a team can see its numbers at a glance and routine steps run on their own. The work is internal, so the dashboard below is a sample built to show the idea.</p>
       <h4>Look behind the screen</h4>
-      <p class="case__hint">Move the lens over the dashboard to see the query behind each widget. Click or press Enter to reveal all of it.</p>
+      <p class="case__hint">Move the lens over the sample dashboard to see the query behind each widget. Click or press Enter to reveal all of it.</p>
       <div class="xray" id="xray" tabindex="0" role="group" aria-label="Sample operations dashboard with an X-ray lens. Press Enter to reveal the queries behind every widget.">
         <div class="xr-grid">
           <div class="xr-h xr-head"><b>Operations</b><span>This week</span><em>All teams</em></div>
@@ -863,7 +1117,73 @@ Password added for github.</code></pre>
     <div class="case-content" data-case="prostadenet">
       <p class="project__meta"><span class="tag">Machine learning</span>2024 – 2025</p>
       <h3 class="case__title">ProstadeNet: prostate cancer grading</h3>
-      <p>My bachelor's thesis: a CNN that sorts tissue images into the six ISUP cancer grades. I cleaned 10,616 images and grew the set to 53,080 with augmentation, tuned the network through a 10-step ablation study from 96.07% to 99.83% test accuracy, and checked it with 5-fold cross-validation.</p>
+      <section class="reel" data-reel aria-label="The case study in four scenes">
+        <div class="reel__top">
+          <div class="reel__chapters">
+            <button type="button" class="reel__ch"><i><b></b></i><span>The goal</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>The data</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>The tuning</span></button>
+            <button type="button" class="reel__ch"><i><b></b></i><span>The result</span></button>
+          </div>
+          <button type="button" class="reel__play" data-state="playing" aria-label="Pause"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="i-pause" fill="currentColor" d="M4 2.5h2.6v11H4zm5.4 0H12v11H9.4z"/><path class="i-play" fill="currentColor" d="M4.5 2.4v11.2L13.4 8z"/><g class="i-again" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M4.2 1.6v2.8H7"/></g></svg></button>
+        </div>
+        <div class="reel__stage">
+          <div class="scene is-on" data-scene="pn-goal">
+            <div class="scene__text">
+              <p class="scene__big">6 grades</p>
+              <p class="scene__line">ProstadeNet sorts prostate tissue images into the six ISUP grades, to help pathologists grade faster and more consistently.</p>
+              <p class="scene__note">Drawn sample tile and illustrative scores</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <div class="grade">
+                <div class="grade__tile"><canvas width="512" height="512"></canvas><i class="grade__scan"></i></div>
+                <ol class="grade__list">
+                  <li style="--p: 0.03"><span>Grade 0</span><b><i></i></b></li>
+                  <li style="--p: 0.05"><span>Grade 1</span><b><i></i></b></li>
+                  <li style="--p: 0.14"><span>Grade 2</span><b><i></i></b></li>
+                  <li class="is-top" data-top style="--p: 0.68"><span>Grade 3</span><b><i></i></b></li>
+                  <li style="--p: 0.08"><span>Grade 4</span><b><i></i></b></li>
+                  <li style="--p: 0.02"><span>Grade 5</span><b><i></i></b></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          <div class="scene" data-scene="pn-data">
+            <div class="scene__text">
+              <p class="scene__big" data-count="53080" data-from="10616">53,080</p>
+              <p class="scene__line">tissue images: 10,616 cleaned originals, each with four augmented copies.</p>
+              <p class="scene__note">Each row is one kind of change</p>
+            </div>
+            <div class="scene__art" aria-hidden="true"><div class="aug5"></div></div>
+          </div>
+          <div class="scene" data-scene="pn-tune">
+            <div class="scene__text">
+              <p class="scene__big">10 steps</p>
+              <p class="scene__line">of tuning, one setting at a time, took test accuracy from 96.07% to 99.83%.</p>
+              <p class="scene__note">From the thesis ablation study</p>
+            </div>
+            <div class="scene__art" aria-hidden="true"><div class="tune"></div></div>
+          </div>
+          <div class="scene" data-scene="pn-result">
+            <div class="scene__text">
+              <p class="scene__big" data-count="99.83" data-from="85" data-dec="2" data-unit="%">99.83%</p>
+              <p class="scene__line">test accuracy, ahead of five well-known pretrained models. Across five <span class="nw">cross-validation</span> folds: 97.28% to 98.37%.</p>
+              <p class="scene__note">Test accuracy on the same data. Bars start at 85%.</p>
+            </div>
+            <div class="scene__art" aria-hidden="true">
+              <ul class="race">
+                <li class="is-ours" style="--v: 99.83"><span>ProstadeNet</span><b><i></i></b><em>99.83%</em></li>
+                <li style="--v: 95.85"><span>VGG16</span><b><i></i></b><em>95.85%</em></li>
+                <li style="--v: 95.24"><span>VGG19</span><b><i></i></b><em>95.24%</em></li>
+                <li style="--v: 94.59"><span>MobileNetV2</span><b><i></i></b><em>94.59%</em></li>
+                <li style="--v: 94.24"><span>MobileNet</span><b><i></i></b><em>94.24%</em></li>
+                <li style="--v: 90.21"><span>InceptionV3</span><b><i></i></b><em>90.21%</em></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+      <p class="sr-only">My bachelor's thesis: a CNN that sorts tissue images into the six ISUP cancer grades. I cleaned 10,616 images and grew the set to 53,080 with augmentation, tuned the network through a 10-step ablation study from 96.07% to 99.83% test accuracy, and checked it with 5-fold cross-validation.</p>
       <h4>Watch it run</h4>
       <p class="case__hint">A tile passes through the network, each layer's feature maps light up, and the six grade scores settle on a prediction.</p>
       <div class="cnn-scroll"><div class="cnn" id="cnn" aria-label="Simplified diagram of ProstadeNet: input tile, convolution and pooling layers, a dense layer, and a softmax over six grades."></div></div>
@@ -873,34 +1193,6 @@ Password added for github.</code></pre>
       </div>
       <p class="case__note">Simplified diagram. The feature maps are real convolutions (edge, blur and sharpen filters) computed in the browser on a drawn sample tile, not the thesis data.</p>
       <p class="case__links"><a class="btn btn--ghost" href="#deep-thesis" data-close>Follow one tile through the pipeline</a></p>
-    </div>
-
-    <div class="case-content" data-case="flutter">
-      <p class="project__meta"><span class="tag">Mobile</span>2024</p>
-      <h3 class="case__title">Flutter apps</h3>
-      <p>Three cross-platform apps written in Dart, each on GitHub. They cover REST API calls, timed state, saved scores and multi-screen navigation.</p>
-      <ul class="case__apps">
-        <li><a href="https://github.com/kaif15-14682/Weather_App_Flutter" rel="noopener"><b>Weather</b></a><span>Live conditions from the OpenWeatherMap API.</span></li>
-        <li><a href="https://github.com/kaif15-14682/Quiz_App_flutter" rel="noopener"><b>Quiz</b></a><span>Timed questions, a running score and a saved high score.</span></li>
-        <li><a href="https://github.com/kaif15-14682/Combined_App_Flutter" rel="noopener"><b>Combined app</b></a><span>Login, profile, blog editor, calculator and quiz in one app.</span></li>
-      </ul>
-    </div>
-
-    <div class="case-content" data-case="stroke">
-      <p class="project__meta"><span class="tag">Machine learning</span>2023</p>
-      <h3 class="case__title">Stroke risk prediction</h3>
-      <p>A Jupyter notebook that predicts stroke from 5,110 patient records. I explored and scaled the data, picked features with SelectKBest, and compared KNN, a decision tree, a random forest, SVM and logistic regression. The best reached 94.2% accuracy, but only 74 of the 1,278 test patients had a stroke, so accuracy hides how few strokes the models catch. Resampling is the planned fix.</p>
-      <p class="case__links">
-        <a class="btn btn--ghost" href="#deep-stroke" data-close>See why accuracy misleads, one dot per patient</a>
-        <a class="btn btn--ghost" href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" rel="noopener">View code on GitHub</a>
-      </p>
-    </div>
-
-    <div class="case-content" data-case="password">
-      <p class="project__meta"><span class="tag">Tools</span>2023</p>
-      <h3 class="case__title">Command-line password manager</h3>
-      <p>A Bash script that stores passwords encrypted with AES-256 through OpenSSL and puts a passcode in front of every lookup. One menu covers add, retrieve, list, update, delete and search, and the store lives in a private folder with owner-only permissions.</p>
-      <p class="case__links"><a class="btn btn--ghost" href="https://github.com/kaif15-14682/Password-manager-using-bash" rel="noopener">View code on GitHub</a></p>
     </div>
   </div>
 

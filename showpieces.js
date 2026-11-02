@@ -2,7 +2,7 @@
    GSAP and ScrollTrigger drive the pins and scrubs, Lenis smooths the scroll. Without them, or with reduced motion,
    every piece falls back to a still layout that still reads on its own. */
 (() => {
-const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.classList.contains("quick");
 const MOTION = !reduceMotion;
 const G = window.gsap && window.ScrollTrigger ? window.gsap : null;
 if (G) G.registerPlugin(ScrollTrigger);
@@ -23,6 +23,8 @@ const watch = (el, onIn, onOut, threshold = 0.25) => {
   new IntersectionObserver(([e]) => (e.isIntersecting ? onIn() : onOut && onOut()), { threshold }).observe(el);
 };
 const fmt = (n) => Math.round(n).toLocaleString("en-US");
+// Work that can wait: done while the browser is idle, never during page load (a short delay where idle callbacks are missing)
+const whenIdle = (fn, timeout = 4000) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout }) : setTimeout(fn, 1500));
 const barH = () => (document.querySelector(".topbar") || {}).offsetHeight || 0;
 // Pinned stages sit below the top bar, which is two rows tall on phones; CSS sizes them with --bar.
 const setBar = () => document.documentElement.style.setProperty("--bar", `${barH()}px`);
@@ -84,20 +86,21 @@ safe("hero", () => {
   const hero = $("#about");
   // A short intro holds from the top; a tall one (phones) holds once its bottom is on screen, so none of it gets covered unread.
   const tall = () => hero.offsetHeight + barH() > innerHeight;
+  // Measured from the pin's placeholder, which stays where the intro belongs. A resize far down the page (a phone turning sideways)
+  // would otherwise measure the moved intro, the trigger would land above the page, and the intro would never come back.
+  const heroTop = () => (hero.closest(".pin-spacer") || hero).getBoundingClientRect().top + scrollY;
   const tl = G.timeline({
     defaults: { ease: "none" },
     scrollTrigger: {
-      trigger: hero, start: () => (tall() ? "bottom bottom" : `top ${barH()}`), end: () => `+=${Math.min(hero.offsetHeight, innerHeight)}`,
+      trigger: hero, start: () => (tall() ? heroTop() + hero.offsetHeight - innerHeight : heroTop() - barH()), end: () => `+=${Math.min(hero.offsetHeight, innerHeight)}`,
       pin: true, pinSpacing: false, scrub: 0.5, invalidateOnRefresh: true,
     },
   });
   // Explicit start values: these elements are still mid-entrance (hidden) when the timeline is built,
   // and a plain .to() would record that hidden state as the place to scroll back to.
-  tl.fromTo(".hero__text, .hero .lead", { scale: 1, y: 0, opacity: 1 }, { scale: 0.9, y: -40, opacity: 0, transformOrigin: "0% 50%" }, 0)
-    .fromTo(".hero .glance", { y: 0, opacity: 1 }, { y: -70, opacity: 0 }, 0.1);
-  // The silk is added by script.js; it pushes in as the intro is covered.
-  const silk = hero.querySelector(".silk");
-  if (silk) tl.to(silk, { scale: 1.25 }, 0);
+  tl.fromTo(".hero__text, .hero .lead", { scale: 1, y: 0, opacity: 1 }, { scale: 0.9, y: -40, opacity: 0, transformOrigin: "0% 50%" }, 0);
+  // The panel recedes with it. The satin behind the page pushes in on its own as the intro is covered (script.js).
+  if ($(".hpanel")) tl.fromTo(".hpanel", { scale: 1, y: 0, opacity: 1 }, { scale: 0.92, y: -40, opacity: 0, transformOrigin: "50% 50%" }, 0);
 });
 
 /* ---------- Projects strip: scrolling down moves the cards sideways ---------- */
@@ -105,7 +108,6 @@ safe("hero", () => {
 let stripST = null;
 const goToProject = (card) => {
   if (!card) return;
-  if (card.hidden) document.querySelector('[data-filter="all"]').click();
   // Only cards in the sideways strip need the strip's scroll maths; anything else scrolls straight to itself.
   if (!stripST || !card.closest("#strip-track")) { scrollToEl(card); return; }
   const track = $("#strip-track");
@@ -118,36 +120,77 @@ const goToProject = (card) => {
 
 safe("strip", () => {
   if (!MOTION || !mm) return;
-  const strip = $("#strip"), track = $("#strip-track");
+  const strip = $("#strip"), track = $("#strip-track"), count = $("#strip-n"), rail = $(".rail");
   mm.add("(min-width: 64rem) and (min-height: 760px)", () => {
     strip.classList.add("is-sideways", "bleed");
     const parts = [...track.children].map((c) => ({ c, info: c.querySelector(".project__info"), vis: c.querySelector(".project__visual") }));
+    let shownNo = 1;
     // Every card is measured first and written after, so a frame never forces more than one layout.
     const parallax = () => {
-      const mid = innerWidth / 2;
-      const shown = parts.filter(({ c }) => !c.hidden);
-      const rects = shown.map(({ c }) => c.getBoundingClientRect());
-      shown.forEach(({ c, info, vis }, i) => {
-        const r = rects[i];
-        const o = Math.max(-1.5, Math.min(1.5, (r.left + r.width / 2 - mid) / r.width));
+      const mid = innerWidth / 2, W = innerWidth;
+      const rects = parts.map(({ c }) => c.getBoundingClientRect());
+      const texts = parts.map(({ info }) => info.getBoundingClientRect());
+      let nearest = 0, best = Infinity;
+      parts.forEach(({ c, info, vis }, i) => {
+        const r = rects[i], t = texts[i];
+        const off = r.left + r.width / 2 - mid;
+        const o = Math.max(-1.5, Math.min(1.5, off / r.width));
         info.style.transform = `translateX(${(o * -36).toFixed(1)}px)`;
+        // The text stays fully readable while it is on screen and fades only as it crosses an edge,
+        // so a title or description is never shown cut off
+        const outside = Math.max(0, -t.left, t.right - W) / Math.max(1, t.width);
+        info.style.opacity = (1 - Math.min(1, outside / 0.1)).toFixed(3);
         vis.style.transform = `translateX(${(o * 60).toFixed(1)}px)`;
-        c.style.opacity = (1 - Math.min(1, Math.abs(o)) * 0.4).toFixed(3);
+        // The projects either side stay as dimmer hints of what comes next
+        c.style.opacity = (1 - Math.min(1, Math.abs(o)) * 0.5).toFixed(3);
+        if (Math.abs(off) < best) { best = Math.abs(off); nearest = i; }
       });
+      if (nearest + 1 !== shownNo) count.textContent = shownNo = nearest + 1;
     };
     const tween = G.to(track, {
       x: () => -Math.max(0, track.scrollWidth - innerWidth),
       ease: "none",
+      // Runs on every frame the track moves, including the glide after the scroll stops, so the fades never lag the cards
+      onUpdate: parallax,
       scrollTrigger: {
         trigger: strip, start: "top top", end: () => `+=${Math.max(1, track.scrollWidth - innerWidth)}`,
-        pin: true, scrub: 0.6, invalidateOnRefresh: true, onUpdate: parallax, onRefresh: parallax,
+        // Pins are measured in page order: the strip first, then Experience, then the scroll stories below them
+        pin: true, scrub: 0.6, invalidateOnRefresh: true, refreshPriority: 2, onRefresh: parallax,
+        // The cards run edge to edge here, so the section rail steps aside instead of sitting on their text.
+        onToggle: (self) => { if (rail) rail.classList.toggle("is-tucked", self.isActive); },
       },
     });
     stripST = tween.scrollTrigger;
+    // When the reader stops between two projects, the strip glides on to the next one in the direction they were going,
+    // so no description is ever left half off the page.
+    const centred = () => parts.map(({ c }) => {
+      const dist = Math.max(1, track.scrollWidth - innerWidth);
+      const p = Math.max(0, Math.min(1, (c.offsetLeft + c.offsetWidth / 2 - innerWidth / 2) / dist));
+      return stripST.start + p * (stripST.end - stripST.start);
+    });
+    let idle = 0, lastY = scrollY, dir = 1;
+    const settle = () => {
+      if (!stripST || !stripST.isActive) return;
+      const y = scrollY, ys = centred();
+      const to = dir > 0 ? ys.find((v) => v >= y - 1) : [...ys].reverse().find((v) => v <= y + 1);
+      if (to === undefined || Math.abs(to - y) < 2) return;
+      if (lenis) lenis.scrollTo(to, { duration: 0.7, easing: (t) => 1 - Math.pow(1 - t, 3) });
+      else window.scrollTo({ top: to, behavior: "smooth" });
+    };
+    const onScroll = () => {
+      if (scrollY !== lastY) dir = scrollY > lastY ? 1 : -1;
+      lastY = scrollY;
+      clearTimeout(idle);
+      idle = setTimeout(settle, 180);
+    };
+    addEventListener("scroll", onScroll, { passive: true });
     return () => {
       stripST = null;
+      removeEventListener("scroll", onScroll);
+      clearTimeout(idle);
+      if (rail) rail.classList.remove("is-tucked");
       strip.classList.remove("is-sideways", "bleed");
-      parts.forEach(({ c, info, vis }) => { info.style.transform = vis.style.transform = c.style.opacity = ""; });
+      parts.forEach(({ c, info, vis }) => { info.style.transform = info.style.opacity = vis.style.transform = c.style.opacity = ""; });
     };
   });
 });
@@ -251,6 +294,162 @@ safe("highlights", () => {
     if (stat && !stat.querySelector(".hl__arrow") && !countUp(stat, delay)) decrypt(stat, delay);
   }), { rootMargin: "0px 0px -10% 0px" });
   tiles.forEach((t) => io.observe(t));
+});
+
+/* ---------- Hero panel: one window, a tab for each noun in the headline ----------
+   Databases shows requests arriving at the school system, dashboards a sample Retool board, models the real tuning curve
+   from the thesis. The tabs take turns while the intro is in view, and the matching word in the headline lights up.
+   Pointer or keyboard focus on the panel holds it still; a tab click stops the turns. */
+
+safe("hero panel", () => {
+  const panel = $("#hpanel");
+  if (!panel) return;
+  const q = (sel) => panel.querySelector(sel);
+  const head = $("#about-title");
+  // Without the word-by-word split (reduced motion), the three nouns get spans of their own so they can still light up
+  if (!head.querySelector(".w")) head.innerHTML = head.innerHTML.replace(/\b(databases|dashboards|models)\b/g, '<span class="noun">$1</span>');
+  const noun = (w) => [...head.querySelectorAll(".w > span, .noun")].find((el) => el.textContent.startsWith(w));
+
+  const HOLD = 6500;
+  const META = {
+    db: { word: "databases", title: "school_db · requests", name: "School management system", note: "sample traffic", href: "#p-school" },
+    dash: { word: "dashboards", title: "ops_dashboard · retool", name: "Operations dashboards", note: "sample data", href: "#p-retool" },
+    model: { word: "models", title: "prostadenet · tuning", name: "ProstadeNet", note: "thesis results", href: "#p-prostadenet" },
+  };
+  const ORDER = ["db", "dash", "model"];
+  const tabs = q(".hp-tabs"), buttons = [...tabs.querySelectorAll("button")];
+  const panes = Object.fromEntries(ORDER.map((k) => [k, q(`[data-pane="${k}"]`)]));
+  const title = $("#hp-title"), foot = $("#hp-foot"), name = $("#hp-name"), note = $("#hp-note");
+  tabs.style.setProperty("--hold", `${HOLD}ms`);
+
+  // Databases: sample requests arriving at the school system's routes
+  const REQS = [["GET", "/classes", 200], ["POST", "/student", 201], ["GET", "/attendance-create/4", 200], ["POST", "/assign-subject-to-class/12", 302], ["GET", "/roles-permissions", 200], ["PUT", "/teacher/7", 200], ["GET", "/parents", 200], ["DELETE", "/subject/3", 302], ["POST", "/assignrole", 302]];
+  const log = $("#hp-log");
+  let reqNo = 0, reqTimer = 0;
+  const addReq = (animate) => {
+    const [m, path, st] = REQS[reqNo++ % REQS.length];
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="m m-${m}">${m}</span><span class="p">${path}</span><span class="st${st === 302 ? " r" : ""}">${st}</span><span class="ms">${8 + Math.round(Math.random() * 40)} ms</span>`;
+    log.prepend(li);
+    while (log.children.length > 8) log.lastChild.remove();
+    if (animate) li.animate([{ opacity: 0, transform: "translateY(-8px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: EASE_OUT });
+  };
+  for (let i = 0; i < 8; i++) addReq(false);
+  const startDb = () => {
+    clearInterval(reqTimer);
+    reqTimer = MOTION ? setInterval(() => addReq(true), 850) : 0;
+  };
+
+  // Dashboards: the bars grow and the two figures count up
+  const dash = q(".hp-dash");
+  const count = (el, to) => {
+    if (!MOTION) { el.textContent = to; return; }
+    const t0 = performance.now();
+    const tick = (now) => {
+      const k = Math.min(1, (now - t0) / 900);
+      el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  const startDash = () => {
+    dash.classList.remove("is-on");
+    void dash.offsetWidth;
+    dash.classList.add("is-on");
+    count($("#hp-open"), 128);
+    count($("#hp-sent"), 42);
+  };
+
+  // Models: the tuning curve from the thesis (STEPS, script.js) draws itself
+  const chartHost = $("#hp-chart");
+  const W = 340, H = 150, M = { t: 20, r: 10, b: 8, l: 30 }, last = STEPS.length - 1;
+  const cx = (i) => M.l + (i * (W - M.l - M.r)) / last;
+  const cy = (v) => M.t + ((100 - v) / 4.5) * (H - M.t - M.b);
+  const svg = svgEl("svg", { class: "hp-chart", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true" }, chartHost);
+  for (let v = 96; v <= 100; v += 2) {
+    svgEl("line", { class: "g", x1: M.l, x2: W - M.r, y1: cy(v), y2: cy(v) }, svg);
+    svgEl("text", { x: M.l - 6, y: cy(v) + 3.5, "text-anchor": "end" }, svg).textContent = `${v}%`;
+  }
+  let d = `M ${cx(0)} ${cy(STEPS[0].acc)}`;
+  for (let i = 1; i <= last; i++) d += ` H ${cx(i)} V ${cy(STEPS[i].acc)}`;
+  const area = svgEl("path", { class: "a", d: `${d} V ${H - M.b} H ${cx(0)} Z` }, svg);
+  const line = svgEl("path", { class: "l", d, pathLength: 1 }, svg);
+  const top = STEPS[last];
+  const mark = svgEl("line", { class: "m", x1: cx(last), x2: cx(last), y1: cy(top.acc), y2: H - M.b }, svg);
+  const dot = svgEl("circle", { class: "d", r: 3.5, cx: cx(last), cy: cy(top.acc) }, svg);
+  const val = svgEl("text", { class: "v", "text-anchor": "middle", x: Math.min(cx(last), W - M.r - 22), y: cy(top.acc) - 8 }, svg);
+  val.textContent = `${top.acc.toFixed(2)}%`;
+  $("#hp-read").textContent = "Ten tuning steps took test accuracy from 96.07% to 99.83%.";
+  const startModel = () => {
+    if (!MOTION) return;
+    line.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 1500, easing: "cubic-bezier(.45, 0, .2, 1)", fill: "backwards" });
+    area.animate([{ opacity: 0 }, { opacity: 0.8 }], { duration: 700, delay: 900, easing: "ease", fill: "backwards" });
+    [mark, dot, val].forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 1350, easing: "ease", fill: "backwards" }));
+  };
+
+  const START = { db: startDb, dash: startDash, model: startModel };
+  let cur = 0, timer = 0, began = 0, left = HOLD, manual = false, held = false, onScreen = true, live = false;
+  const lit = (k) => ORDER.forEach((o) => { const w = noun(META[o].word); if (w) w.classList.toggle("is-lit", o === k); });
+  const schedule = (ms) => {
+    clearTimeout(timer);
+    if (!MOTION || manual || held || !onScreen || !live) return;
+    began = performance.now();
+    left = ms;
+    timer = setTimeout(() => show((cur + 1) % ORDER.length), ms);
+  };
+  const show = (i) => {
+    cur = i;
+    const k = ORDER[i], m = META[k];
+    ORDER.forEach((o, j) => {
+      panes[o].hidden = o !== k;
+      buttons[j].setAttribute("aria-pressed", String(o === k));
+    });
+    lit(k);
+    title.textContent = m.title;
+    name.textContent = m.name;
+    note.textContent = m.note;
+    foot.setAttribute("href", m.href);
+    if (MOTION) panes[k].animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: EASE_OUT });
+    clearInterval(reqTimer);
+    START[k]();
+    tabs.classList.remove("is-auto");
+    void tabs.offsetWidth;
+    tabs.classList.toggle("is-auto", MOTION && !manual);
+    schedule(HOLD);
+  };
+  buttons.forEach((b, i) => b.addEventListener("click", () => { manual = true; show(i); }));
+  // The link in the foot goes to its project, even when the card sits further along the sideways strip
+  foot.addEventListener("click", (e) => {
+    const card = document.querySelector(foot.getAttribute("href"));
+    if (!card) return;
+    e.preventDefault();
+    goToProject(card);
+  });
+  // Holding the pointer or keyboard focus on it stops the clock, so it never changes under someone reading it
+  const hold = (h) => {
+    held = h;
+    tabs.classList.toggle("is-held", h);
+    if (h) { clearTimeout(timer); left = Math.max(300, left - (performance.now() - began)); }
+    else schedule(left);
+  };
+  panel.addEventListener("pointerenter", () => hold(true));
+  panel.addEventListener("pointerleave", () => hold(false));
+  panel.addEventListener("focusin", () => hold(true));
+  panel.addEventListener("focusout", () => hold(false));
+  watch(panel, () => {
+    onScreen = true;
+    if (!live) return;
+    if (ORDER[cur] === "db") startDb();
+    schedule(left);
+  }, () => {
+    onScreen = false;
+    clearTimeout(timer);
+    clearInterval(reqTimer);
+  }, 0.2);
+  // The turns start once the intro screen has lifted, so the first pane plays where it can be seen
+  const start = () => { live = true; show(0); };
+  if (document.documentElement.classList.contains("intro-on")) window.addEventListener("intro:done", start, { once: true });
+  else start();
 });
 
 /* ---------- School card: the routes light up as sample requests arrive ---------- */
@@ -969,7 +1168,13 @@ safe("cnn", () => {
   const setPred = (g, p) => (pred.innerHTML = `Predicted: grade ${g} · ${Math.round(p * 100)}%<small>Illustrative scores, not real model output</small>`);
 
   const RUNS = [[11, 3], [23, 1], [37, 4], [51, 2], [64, 5], [78, 0]];
-  apply(maps(RUNS[0][0]));
+  // The feature maps take a moment to compute, so they are made while the browser is idle rather than during page load,
+  // and each run's maps are kept for the next lap of the loop.
+  const cache = new Map();
+  const mapsFor = (seed) => { if (!cache.has(seed)) cache.set(seed, maps(seed)); return cache.get(seed); };
+  let primed = false;
+  const prime = () => { if (primed) return; primed = true; apply(mapsFor(RUNS[0][0])); };
+  whenIdle(prime, 5000);
   const first = scores(RUNS[0][1], RUNS[0][0]);
   showScores(first, RUNS[0][1]);
   setPred(RUNS[0][1], first[RUNS[0][1]]);
@@ -978,7 +1183,9 @@ safe("cnn", () => {
   let run = 1, tl = null, visible = false, lastP = first;
   const cycle = () => {
     const [seed, g] = RUNS[run++ % RUNS.length];
-    const m = maps(seed);
+    const m = mapsFor(seed);
+    // The next lap's maps are made in the pause at the end of this one
+    whenIdle(() => mapsFor(RUNS[run % RUNS.length][0]), 3000);
     const p = scores(g, seed);
     const old = lastP, fade = { k: 1 }, grow = { k: 0 };
     tl = G.timeline({ onComplete: () => { lastP = p; cycle(); }, paused: !visible });
@@ -1006,7 +1213,382 @@ safe("cnn", () => {
       .to(pred, { opacity: 1, duration: 0.35 }, t + 0.9)
       .to({}, { duration: 2.4 });
   };
-  watch(host, () => { visible = true; if (!tl) cycle(); else tl.resume(); }, () => { visible = false; if (tl) tl.pause(); }, 0.3);
+  watch(host, () => { visible = true; prime(); if (!tl) cycle(); else tl.resume(); }, () => { visible = false; if (tl) tl.pause(); }, 0.3);
+});
+
+/* ---------- Case studies: four short scenes that play on their own ----------
+   Each case study opens on a reel: a picture and one line per scene, so the story lands without reading.
+   The markup holds every finished picture. Each scene's timeline animates into it and can always settle there.
+   With reduced motion, Quick view or no GSAP, the scenes sit side by side as a still storyboard. */
+
+safe("reels", () => {
+  const reels = [...document.querySelectorAll("[data-reel]")];
+  if (!reels.length) return;
+  const LIVE = MOTION && !!G;
+  const SCENE = 5; // seconds each scene stays up, so four scenes make the 20 seconds the buttons promise
+
+  // One drawn tissue tile feeds every thesis picture
+  let tissue = null;
+  const tissueTile = () => {
+    if (!tissue) {
+      tissue = document.createElement("canvas");
+      tissue.width = tissue.height = 512;
+      drawTissue(tissue, false, 11);
+    }
+    return tissue;
+  };
+  // A real 3 × 3 sharpen at half strength, so the Sharpness row shows what the augmentation did
+  const sharpen = (x, n) => {
+    const s = x.getImageData(0, 0, n, n).data, out = x.createImageData(n, n), o = out.data;
+    const at = (px, py, c) => s[(Math.min(n - 1, Math.max(0, py)) * n + Math.min(n - 1, Math.max(0, px))) * 4 + c];
+    for (let py = 0; py < n; py++) {
+      for (let px = 0; px < n; px++) {
+        const i = (py * n + px) * 4;
+        for (let c = 0; c < 3; c++) o[i + c] = 3 * s[i + c] - 0.5 * (at(px - 1, py, c) + at(px + 1, py, c) + at(px, py - 1, c) + at(px, py + 1, c));
+        o[i + 3] = 255;
+      }
+    }
+    x.putImageData(out, 0, 0);
+  };
+  // Counts a number up to the value written in the markup
+  const countUp = (el, tl, at, dur) => {
+    const to = parseFloat(el.dataset.count), dec = +(el.dataset.dec || 0), unit = el.dataset.unit || "";
+    const o = { v: parseFloat(el.dataset.from || 0) };
+    const paint = () => (el.textContent = (dec ? o.v.toFixed(dec) : fmt(o.v)) + unit);
+    paint();
+    tl.to(o, { v: to, duration: dur, ease: "power2.out", onUpdate: paint }, at);
+  };
+  const rise = (tl, el, at = 0.1) => tl.from(el, { y: 16, opacity: 0, duration: 0.6, ease: "power3.out" }, at);
+  const drawIn = (tl, path, at, duration) => {
+    path.setAttribute("stroke-dasharray", "1");
+    tl.fromTo(path, { attr: { "stroke-dashoffset": 1 } }, { attr: { "stroke-dashoffset": 0 }, duration, ease: "none" }, at);
+  };
+
+  // Sample records for the school app. Names match the sample attendance in the scroll story.
+  const MODULES = [
+    ["Classes", [["Class 6", "34 students"], ["Class 7", "38 students"], ["Class 8", "36 students"]]],
+    ["Subjects", [["Mathematics", "Classes 6–8"], ["English", "Classes 6–8"], ["Science", "Classes 7–8"]]],
+    ["Teachers", [["Farhana Akter", "Mathematics"], ["Imran Hossain", "English"], ["Shirin Sultana", "Science"]]],
+    ["Students", [["Ayesha Rahman", "Class 7"], ["Tanvir Hasan", "Class 7"], ["Nusrat Jahan", "Class 7"]]],
+    ["Parents", [["Mahbub Rahman", "Ayesha's father"], ["Rokeya Hasan", "Tanvir's mother"], ["Selina Jahan", "Nusrat's mother"]]],
+  ];
+
+  // Pieces made from data, built once per reel in every mode
+  const BUILD = {
+    "pn-goal": (sc) => sc.querySelector(".grade canvas").getContext("2d").drawImage(tissueTile(), 0, 0),
+    "pn-data": (sc) => {
+      const host = sc.querySelector(".aug5"), src = tissueTile();
+      const SPOTS = [[20, 30], [180, 12], [340, 40], [60, 190], [250, 170], [350, 230], [12, 340], [160, 330], [300, 352], [200, 262]];
+      const ROWS = [["Original", ""], ["Colour", "hue-rotate(-18deg) saturate(1.45)"], ["Brightness", "brightness(1.22)"], ["Contrast", "contrast(1.45)"], ["Sharpness", "sharpen"]];
+      ROWS.forEach(([name, look]) => {
+        const row = document.createElement("div");
+        row.className = "aug5__row";
+        row.innerHTML = `<span>${name}</span><div class="aug5__tiles"></div>`;
+        SPOTS.forEach(([sx, sy]) => {
+          const c = document.createElement("canvas");
+          c.width = c.height = 64;
+          const x = c.getContext("2d", { willReadFrequently: look === "sharpen" });
+          x.drawImage(src, sx, sy, 160, 160, 0, 0, 64, 64);
+          if (look === "sharpen") sharpen(x, 64);
+          else if (look) c.style.filter = look;
+          row.lastElementChild.append(c);
+        });
+        host.append(row);
+      });
+    },
+    // The ablation steps from the thesis (STEPS, script.js), drawn as a step line
+    "pn-tune": (sc) => {
+      const W = 420, H = 230, L = 36, R = 18, T = 26, B = 28, last = STEPS.length - 1;
+      const X = (i) => L + (i * (W - L - R)) / last, Y = (v) => T + ((100 - v) / 4.5) * (H - T - B);
+      const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}` });
+      const defs = svgEl("defs", {}, svg);
+      const grad = svgEl("linearGradient", { id: "reel-tune-fill", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+      svgEl("stop", { offset: 0, "stop-color": "#2997ff", "stop-opacity": 0.28 }, grad);
+      svgEl("stop", { offset: 1, "stop-color": "#2997ff", "stop-opacity": 0 }, grad);
+      svgEl("rect", { class: "tune__clip", x: 0, y: 0, width: W, height: H }, svgEl("clipPath", { id: "reel-tune-clip" }, defs));
+      const grid = svgEl("g", { class: "grid" }, svg);
+      for (let v = 96; v <= 100; v++) {
+        svgEl("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v) }, grid);
+        svgEl("text", { x: L - 8, y: Y(v) + 4, "text-anchor": "end" }, grid).textContent = `${v}%`;
+      }
+      STEPS.forEach((_, i) => (svgEl("text", { x: X(i), y: H - 6, "text-anchor": "middle" }, grid).textContent = i));
+      let d = `M ${X(0)} ${Y(STEPS[0].acc)}`;
+      for (let i = 1; i <= last; i++) d += ` H ${X(i)} V ${Y(STEPS[i].acc)}`;
+      svgEl("path", { class: "area", d: `${d} V ${H - B} H ${X(0)} Z`, "clip-path": "url(#reel-tune-clip)" }, svg);
+      svgEl("path", { class: "line", d, pathLength: 1 }, svg);
+      STEPS.forEach((s, i) => svgEl("circle", { class: i === last ? "dot is-big" : "dot", cx: X(i), cy: Y(s.acc), r: i === last ? 5 : 3.2 }, svg));
+      [[0, "96.07%", 22, "start"], [5, "ReLU", -12, "middle"], [9, "Adam", -12, "middle"], [last, "99.83%", -13, "end"]].forEach(([i, text, dy, anchor]) => {
+        svgEl("text", { class: "note", "data-i": i, x: X(i) - (anchor === "start" ? 4 : 0), y: Y(STEPS[i].acc) + dy, "text-anchor": anchor }, svg).textContent = text;
+      });
+      sc.querySelector(".tune").append(svg);
+    },
+    "sc-access": (sc) => sc.querySelectorAll(".perm__t i").forEach((t) => (t.dataset.on = t.classList.contains("on") ? "1" : "")),
+  };
+
+  // Each scene's timeline. Mostly from() tweens: the resting state is the finished picture.
+  const PLAY = {
+    "pn-goal": (sc, tl) => {
+      const scan = sc.querySelector(".grade__scan"), top = sc.querySelector("[data-top]");
+      // The predicted grade lights up only once the scores have settled
+      top.classList.remove("is-top");
+      tl.from(sc.querySelector(".grade__tile"), { scale: 0.86, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.1)
+        .from(sc.querySelectorAll(".grade__list li"), { x: 14, opacity: 0, duration: 0.4, stagger: 0.07, ease: "power2.out" }, 0.35)
+        .fromTo(scan, { yPercent: -100, opacity: 1 }, { yPercent: 340, duration: 1.4, ease: "power1.inOut" }, 0.6)
+        .to(scan, { opacity: 0, duration: 0.3 }, 1.8)
+        .from(sc.querySelectorAll(".grade__list i"), { scaleX: 0, duration: 1.1, stagger: 0.05, ease: "power3.out" }, 1.85)
+        .call(() => top.classList.add("is-top"), null, 2.55);
+    },
+    "pn-data": (sc, tl) => {
+      const rows = [...sc.querySelectorAll(".aug5__row")];
+      if (!rows.length) return;
+      tl.from(rows[0].querySelector("span"), { opacity: 0, duration: 0.3 }, 0.15)
+        .from(rows[0].querySelectorAll("canvas"), { scale: 0.4, opacity: 0, duration: 0.45, stagger: 0.04, ease: "back.out(1.6)" }, 0.15);
+      // Each original drops four changed copies below it
+      rows.slice(1).forEach((row, r) => {
+        const at = 0.95 + r * 0.42;
+        tl.from(row.querySelector("span"), { opacity: 0, x: -8, duration: 0.3 }, at)
+          .from(row.querySelectorAll("canvas"), { y: -24, opacity: 0, duration: 0.5, stagger: 0.025, ease: "power3.out" }, at);
+      });
+      countUp(sc.querySelector("[data-count]"), tl, 0.95, 1.9);
+    },
+    "pn-tune": (sc, tl) => {
+      const svg = sc.querySelector(".tune svg");
+      if (!svg) return;
+      const dots = [...svg.querySelectorAll(".dot")];
+      // When the line reaches each step, measured along its run and rise
+      const seg = dots.map((d, i) => (i ? Math.abs(d.cx.baseVal.value - dots[i - 1].cx.baseVal.value) + Math.abs(d.cy.baseVal.value - dots[i - 1].cy.baseVal.value) : 0));
+      const total = seg.reduce((a, b) => a + b, 0);
+      let run = 0;
+      const when = seg.map((l) => (run += l) / total);
+      const D = 2.6, t0 = 0.45;
+      tl.from(svg.querySelector(".grid"), { opacity: 0, duration: 0.5 }, 0.1)
+        .fromTo(svg.querySelector(".tune__clip"), { attr: { width: 0 } }, { attr: { width: 420 }, duration: D, ease: "none" }, t0);
+      drawIn(tl, svg.querySelector(".line"), t0, D);
+      dots.forEach((d, i) => tl.from(d, { scale: 0, transformOrigin: "50% 50%", duration: 0.3, ease: "back.out(2.4)" }, t0 + D * when[i]));
+      svg.querySelectorAll(".note").forEach((n) => tl.from(n, { opacity: 0, y: 6, duration: 0.35 }, t0 + D * when[+n.dataset.i] + 0.05));
+    },
+    "pn-result": (sc, tl) => {
+      tl.from(sc.querySelectorAll(".race li"), { opacity: 0, y: 10, duration: 0.4, stagger: 0.06, ease: "power2.out" }, 0.1)
+        // The others fill first, ProstadeNet last
+        .from(sc.querySelectorAll(".race i"), { scaleX: 0, duration: 1.2, stagger: { each: 0.12, from: "end" }, ease: "power3.out" }, 0.5);
+      countUp(sc.querySelector("[data-count]"), tl, 0.5, 1.9);
+    },
+
+    "sc-app": (sc, tl) => {
+      const nav = [...sc.querySelectorAll(".sapp__nav li")], head = sc.querySelector(".sapp__h"), rows = [...sc.querySelectorAll(".sapp__rows li")];
+      const open = (m) => {
+        nav.forEach((li, i) => li.classList.toggle("is-on", i === m));
+        head.textContent = MODULES[m][0];
+        rows.forEach((li, r) => { [li.children[0].textContent, li.children[1].textContent] = MODULES[m][1][r]; });
+      };
+      open(0);
+      rise(tl, sc.querySelector(".sapp"));
+      tl.fromTo(rows, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, stagger: 0.05 }, 0.45);
+      for (let m = 1; m < MODULES.length; m++) {
+        const at = 0.5 + m * 0.66;
+        tl.call(open, [m], at).fromTo(rows, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, stagger: 0.05, immediateRender: false }, at);
+      }
+    },
+    "sc-day": (sc, tl) => {
+      rise(tl, sc.querySelector(".att"));
+      tl.from(sc.querySelectorAll(".att__rows em"), { scale: 0.5, opacity: 0, duration: 0.35, stagger: 0.3, ease: "back.out(2.2)" }, 0.75)
+        .to(sc.querySelector(".att__save"), { scale: 0.9, duration: 0.12, yoyo: true, repeat: 1, ease: "power1.inOut" }, 2.4)
+        .from(sc.querySelector(".att__toast"), { y: 10, opacity: 0, duration: 0.4, ease: "power2.out" }, 2.65);
+    },
+    "sc-access": (sc, tl) => {
+      const toggles = [...sc.querySelectorAll(".perm__t i")], req = sc.querySelector(".perm__req");
+      toggles.forEach((t) => t.classList.remove("on"));
+      rise(tl, sc.querySelector(".perm"));
+      // Admin's column switches on first, then Teacher's
+      toggles.filter((t) => t.dataset.on).sort((a, b) => a.parentElement.cellIndex - b.parentElement.cellIndex)
+        .forEach((t, k) => tl.call(() => t.classList.add("on"), null, 0.75 + k * 0.2));
+      tl.from(req, { y: 10, opacity: 0, duration: 0.4, ease: "power2.out" }, 2.25)
+        .from(req.querySelector("em"), { scale: 1.8, opacity: 0, duration: 0.35, ease: "back.out(2)" }, 2.7)
+        .to(req, { x: -4, duration: 0.06, repeat: 5, yoyo: true, ease: "none" }, 2.95);
+    },
+    "sc-stack": (sc, tl) => {
+      const layers = [...sc.querySelectorAll(".lyr__l")], dot = sc.querySelector(".lyr__dot");
+      const ys = layers.map((l) => l.offsetTop + l.offsetHeight / 2 - dot.offsetTop - dot.offsetHeight / 2);
+      const hit = (k) => layers.forEach((l, i) => l.classList.toggle("is-hit", i === k));
+      const last = ys.length - 1;
+      tl.from(layers, { x: 18, opacity: 0, duration: 0.45, stagger: 0.1, ease: "power2.out" }, 0.1)
+        .fromTo(dot, { y: ys[0], opacity: 0 }, { opacity: 1, duration: 0.25 }, 0.75)
+        .call(hit, [0], 0.8);
+      // A request travels down to MySQL, then the answer comes back up
+      for (let k = 1; k <= last; k++) tl.to(dot, { y: ys[k], duration: 0.32, ease: "power1.inOut" }, 0.8 + k * 0.38).call(hit, [k], 1.1 + k * 0.38);
+      const up = 1.25 + ys.length * 0.38;
+      for (let k = last - 1, j = 0; k >= 0; k--, j++) tl.to(dot, { y: ys[k], duration: 0.28, ease: "power1.inOut" }, up + j * 0.3).call(hit, [k], up + j * 0.3 + 0.26);
+      tl.call(hit, [-1], up + last * 0.3 + 0.35)
+        .from(sc.querySelector(".lyr__msg"), { y: 8, opacity: 0, duration: 0.4, ease: "power2.out" }, up + last * 0.3 + 0.3);
+    },
+
+    "rt-data": (sc, tl) => {
+      const wins = [...sc.querySelectorAll(".tbl")];
+      tl.from(wins, { y: 16, opacity: 0, duration: 0.6, stagger: 0.12, ease: "power3.out" }, 0.1);
+      // Rows land like inserts, taking turns between the two tables
+      wins.forEach((w, k) => w.querySelectorAll("tr:not(:first-child)").forEach((r, i) => {
+        const at = 0.75 + k * 0.2 + i * 0.42;
+        tl.from(r, { opacity: 0, duration: 0.3 }, at).from(r, { backgroundColor: "rgba(41, 151, 255, 0.28)", duration: 0.9, ease: "power1.out" }, at);
+      }));
+    },
+    "rt-query": (sc, tl) => {
+      rise(tl, sc.querySelector(".sq__code"));
+      let at = 0.5;
+      // Typed out a character at a time
+      sc.querySelectorAll(".sq__code .ln").forEach((ln) => {
+        const n = ln.textContent.length, d = n * 0.04;
+        tl.fromTo(ln, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: d, ease: `steps(${n})` }, at);
+        at += d + 0.12;
+      });
+      drawIn(tl, sc.querySelector(".sq__arrow path"), at + 0.05, 0.4);
+      tl.from(sc.querySelector(".sq__out"), { scale: 0.85, opacity: 0, duration: 0.45, ease: "back.out(1.8)" }, at + 0.3);
+      countUp(sc.querySelector(".sq__out b"), tl, at + 0.3, 0.9);
+    },
+    "rt-dash": (sc, tl) => {
+      rise(tl, sc.querySelector(".mini"));
+      tl.from(sc.querySelectorAll(".mini__kpis div"), { y: 10, opacity: 0, duration: 0.45, stagger: 0.1, ease: "power2.out" }, 0.45)
+        .from(sc.querySelectorAll(".mini__chart i"), { scaleY: 0, duration: 0.8, stagger: 0.07, ease: "power3.out" }, 1);
+      sc.querySelectorAll(".mini__kpis b").forEach((b, i) => countUp(b, tl, 0.55 + i * 0.1, 1.3));
+    },
+    "rt-auto": (sc, tl) => {
+      const nodes = [...sc.querySelectorAll(".wf__flow li")];
+      tl.from(nodes, { y: 12, opacity: 0, duration: 0.45, stagger: 0.15, ease: "power2.out" }, 0.1);
+      nodes.forEach((n, i) => tl.call(() => n.classList.add("is-hit"), null, 0.85 + i * 0.4).call(() => n.classList.remove("is-hit"), null, 1.3 + i * 0.4));
+      tl.from(sc.querySelectorAll(".wf__sent li"), { x: 24, opacity: 0, duration: 0.45, stagger: 0.25, ease: "power3.out" }, 2.2);
+    },
+  };
+
+  const LABEL = { idle: "Pause", playing: "Pause", paused: "Play", ended: "Play again" };
+  const players = [], resets = new Map();
+
+  reels.forEach((reel) => {
+    const scenes = [...reel.querySelectorAll(".scene")];
+    const chs = [...reel.querySelectorAll(".reel__ch")];
+    const fills = chs.map((c) => c.querySelector("b"));
+    const playBtn = reel.querySelector(".reel__play");
+    let built = false;
+    const build = () => {
+      if (built) return;
+      built = true;
+      scenes.forEach((sc) => safe(`reel ${sc.dataset.scene}`, () => BUILD[sc.dataset.scene] && BUILD[sc.dataset.scene](sc)));
+    };
+    scenes.forEach((sc, i) => {
+      sc.setAttribute("role", "group");
+      sc.setAttribute("aria-roledescription", "scene");
+      sc.setAttribute("aria-label", `${i + 1} of ${scenes.length}: ${chs[i] ? chs[i].textContent.trim() : ""}`);
+    });
+
+    if (!LIVE || !("IntersectionObserver" in window)) {
+      reel.classList.add("is-static");
+      whenIdle(build);
+      watch(reel, build, null, 0);
+      return;
+    }
+    reel.classList.add("is-live");
+    // Drawing the tiles takes a moment, so it happens while the browser is idle rather than as the dialog opens
+    whenIdle(build, 6000);
+
+    let idx = 0, tl = null, bar = null, state = "idle", started = false, userPaused = false, autoPaused = false;
+    const setState = (s) => {
+      state = s;
+      playBtn.dataset.state = s === "idle" ? "playing" : s;
+      playBtn.setAttribute("aria-label", LABEL[s]);
+    };
+    // Finish the running scene at once, so its pieces rest in the finished picture
+    const settle = () => {
+      if (tl) { tl.progress(1).kill(); tl = null; }
+      if (bar) { bar.kill(); bar = null; }
+    };
+    const show = (i, delay = 0) => {
+      settle();
+      idx = i;
+      const sc = scenes[i];
+      scenes.forEach((s) => {
+        if (s === sc || !s.classList.contains("is-on")) return;
+        G.to(s, { opacity: 0, x: -24, duration: 0.3, ease: "power2.in", overwrite: true, onComplete: () => { s.classList.remove("is-on"); G.set(s, { clearProps: "opacity,transform" }); } });
+      });
+      sc.classList.add("is-on");
+      chs.forEach((c, k) => (k === i ? c.setAttribute("aria-current", "step") : c.removeAttribute("aria-current")));
+      fills.forEach((f, k) => G.set(f, { scaleX: k < i ? 1 : 0 }));
+      tl = G.timeline({ delay, paused: state !== "playing" });
+      tl.fromTo(sc, { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out", overwrite: true }, 0);
+      safe(`reel ${sc.dataset.scene}`, () => PLAY[sc.dataset.scene] && PLAY[sc.dataset.scene](sc, tl));
+      bar = G.fromTo(fills[i], { scaleX: 0 }, {
+        scaleX: 1, duration: SCENE, delay, ease: "none", paused: state !== "playing",
+        onComplete: () => (i < scenes.length - 1 ? show(i + 1) : setState("ended")),
+      });
+    };
+    const go = (k) => {
+      userPaused = autoPaused = false;
+      if (k >= scenes.length) { settle(); setState("ended"); return; }
+      setState("playing");
+      show(Math.max(0, k));
+    };
+    const pause = () => {
+      if (state !== "playing") return false;
+      setState("paused");
+      if (tl) tl.pause();
+      if (bar) bar.pause();
+      return true;
+    };
+    const resume = () => {
+      if (state === "ended") { go(0); return; }
+      setState("playing");
+      if (!tl) { show(idx); return; }
+      tl.play();
+      if (bar) bar.play();
+    };
+    const reset = () => {
+      settle();
+      idx = 0;
+      started = userPaused = autoPaused = false;
+      setState("idle");
+      scenes.forEach((s, k) => { G.killTweensOf(s); G.set(s, { clearProps: "opacity,transform" }); s.classList.toggle("is-on", k === 0); });
+      fills.forEach((f) => G.set(f, { scaleX: 0 }));
+      chs.forEach((c) => c.removeAttribute("aria-current"));
+    };
+
+    playBtn.addEventListener("click", () => {
+      if (state === "playing") { userPaused = true; pause(); }
+      else { userPaused = false; resume(); }
+    });
+    chs.forEach((c, k) => c.addEventListener("click", () => go(k)));
+    // A click on the picture skips ahead, the way stories do
+    reel.querySelector(".reel__stage").addEventListener("click", () => go(state === "ended" ? 0 : idx + 1));
+    reel.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      go(e.key === "ArrowRight" ? idx + 1 : idx - 1);
+    });
+
+    // Plays once its dialog opens and pauses while mostly scrolled out of view.
+    // The ratio matters, not just "intersecting": a sliver left at the top of the dialog counts as out of view.
+    new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && e.intersectionRatio >= 0.2) {
+        if (reel.closest(".case-store")) return;
+        build();
+        if (!started) { started = true; setState("playing"); show(0, 0.5); }
+        else if (autoPaused && !userPaused) { autoPaused = false; resume(); }
+      } else if (started && pause()) autoPaused = true;
+    }, { threshold: [0, 0.2] }).observe(reel);
+    resets.set(reel, reset);
+
+    let hiddenPaused = false;
+    players.push((hidden) => {
+      if (hidden) hiddenPaused = pause();
+      else if (hiddenPaused) { hiddenPaused = false; if (!userPaused) resume(); }
+    });
+  });
+
+  // Nothing plays in a background tab, and nothing jumps ahead on return
+  document.addEventListener("visibilitychange", () => players.forEach((p) => p(document.hidden)));
+  // A closed case study goes back to the store, and its reel starts from the top next time it opens
+  const store = document.querySelector(".case-store");
+  if (store && resets.size) {
+    new MutationObserver((list) => list.forEach((m) => m.addedNodes.forEach((n) => {
+      if (n.querySelectorAll) n.querySelectorAll("[data-reel]").forEach((r) => resets.has(r) && resets.get(r)());
+    }))).observe(store, { childList: true });
+  }
 });
 
 /* ---------- How they work 1: exploded view of the school system ---------- */
@@ -1016,7 +1598,7 @@ safe("exploded", () => {
   const stage = $("#xs"), tilt = $("#xs-tilt"), scene = $("#xs-scene"), packet = $("#xs-packet");
   const layers = [...scene.querySelectorAll(".xs__layer")]; // 0 is MySQL at the bottom, 3 is the screen on top
   const legend = [...document.querySelectorAll("#xs-legend li")]; // listed top to bottom
-  const gap = () => (innerWidth < 640 ? 48 : Math.min(128, innerHeight * 0.12));
+  const gap = () => (innerWidth < 640 ? 48 : Math.min(144, innerHeight * 0.14));
   let current = -2;
   const setActive = (k) => {
     if (k === current) return;
@@ -1052,23 +1634,34 @@ safe("exploded", () => {
 safe("story", () => {
   const raw = $("#t-raw"), clean = $("#t-clean");
   if (!raw) return;
-  drawTissue(raw, true);
-  drawTissue(clean, false);
   const aug = $("#aug");
   const filters = ["hue-rotate(-14deg) saturate(1.35)", "brightness(1.18)", "contrast(1.3)", "saturate(0.65) brightness(0.92)"];
-  const copies = filters.map((f, i) => {
+  // The four augmented copies take their place now and are painted with the tile
+  const copies = filters.map((f) => {
     const c = document.createElement("canvas");
     c.width = c.height = 256;
-    const x = c.getContext("2d");
-    x.translate(128, 128);
-    x.rotate((i * Math.PI) / 2);
-    if (i % 2) x.scale(-1, 1);
-    x.drawImage(clean, -128, -128, 256, 256);
     c.style.filter = `${f} contrast(1.3) saturate(1.2)`;
     c.setAttribute("aria-hidden", "true");
     aug.append(c);
     return c;
   });
+  // Drawing the tile takes a moment, so it happens while the browser is idle, or as soon as the story comes near
+  let painted = false;
+  const paintTiles = () => {
+    if (painted) return;
+    painted = true;
+    drawTissue(raw, true);
+    drawTissue(clean, false);
+    copies.forEach((c, i) => {
+      const x = c.getContext("2d");
+      x.translate(128, 128);
+      x.rotate((i * Math.PI) / 2);
+      if (i % 2) x.scale(-1, 1);
+      x.drawImage(clean, -128, -128, 256, 256);
+    });
+  };
+  whenIdle(paintTiles, 4000);
+  watch($("#story"), paintTiles, null, 0);
   const steps = [...document.querySelectorAll("#story-steps li")];
   const setStep = (k) => {
     steps.forEach((li, i) => { li.classList.toggle("on", i === k); li.classList.toggle("done", i < k); });
@@ -1078,29 +1671,31 @@ safe("story", () => {
 
   $("#story").classList.add("is-pinned");
   const img = $("#c-img"), acc = $("#c-acc");
-  const counter = { img: 10616, acc: 0 };
-  const paint = () => {
-    img.textContent = fmt(counter.img);
-    acc.textContent = counter.acc ? `${counter.acc.toFixed(2)}%` : "–";
+  // The numbers are read off the timeline's own clock, so they always match the step on screen,
+  // including just before the story starts (images grow from 4 to 5, accuracy counts up from 5.1 to 5.9)
+  const accEase = G.parseEase("power1.out");
+  const paint = (t) => {
+    img.textContent = fmt(10616 + (53080 - 10616) * Math.min(1, Math.max(0, t - 4)));
+    const k = (t - 5.1) / 0.8;
+    acc.textContent = k < 0 ? "–" : `${(96.07 + (99.83 - 96.07) * accEase(Math.min(1, k))).toFixed(2)}%`;
   };
   const offsets = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
   const tl = G.timeline({
     defaults: { ease: "power2.inOut" },
-    onUpdate: () => setStep(Math.min(5, Math.floor(tl.time()))),
+    onUpdate: () => { setStep(Math.min(5, Math.floor(tl.time()))); paint(tl.time()); },
     scrollTrigger: { trigger: "#story", start: () => `top ${barH()}`, end: "+=260%", pin: true, scrub: 0.6, invalidateOnRefresh: true },
   });
-  tl.set(counter, { img: 10616, acc: 0, onUpdate: paint }, 0)
-    .to("#tframe", { scale: 0.72, duration: 0.8 }, 1)
+  tl.to("#tframe", { scale: 0.72, duration: 0.8 }, 1)
     .to(clean, { opacity: 1, duration: 0.8 }, 2)
     .to("#tframe", { filter: "contrast(1.3) saturate(1.2) brightness(1.03)", duration: 0.8 }, 3)
     .to(copies, {
       opacity: 1, scale: 0.44, duration: 1,
       xPercent: (i) => offsets[i][0] * 52, yPercent: (i) => offsets[i][1] * 52, rotation: (i) => offsets[i][0] * offsets[i][1] * 4,
     }, 4)
-    .to(counter, { img: 53080, duration: 1, ease: "none", onUpdate: paint }, 4)
-    .fromTo(counter, { acc: 96.07 }, { acc: 99.83, duration: 0.8, ease: "power1.out", onUpdate: paint, immediateRender: false }, 5.1)
+    // Holds the accuracy count-up's place on the clock, then a short rest at the end
+    .to({}, { duration: 0.8 }, 5.1)
     .to({}, { duration: 0.35 });
-  paint();
+  paint(0);
   setStep(0);
 });
 
@@ -1447,35 +2042,60 @@ safe("timeline", () => {
     const lineH = list.offsetHeight - 16;
     items.forEach((li) => li.classList.toggle("is-lit", li.offsetTop + 26 <= 8 + p * lineH)); // 26px: centre of each dot
   };
+  const y = { v: 2026 };
+  const countTo = (i) => {
+    label.textContent = ROLES[i][1];
+    G.to(y, { v: ROLES[i][0], duration: 0.6, ease: "power2.out", overwrite: true, onUpdate: () => (year.textContent = Math.round(y.v)) });
+  };
 
-  // Tall screens: pin the section, slide the roles in one by one and count the year back.
+  // Tall wide screens: the section holds still while the roles slide in one by one and the year counts back.
+  // The current role is already in place when the section arrives, so a jump from the menu never lands on an empty list,
+  // and earlier roles only dim a little while the next one comes in.
   mm.add("(min-width: 56rem) and (min-height: 800px)", () => {
-    wrap.classList.add("is-pinned");
-    const y = { v: 2026 };
-    const tl = G.timeline({
-      defaults: { ease: "power2.out" },
-      scrollTrigger: { trigger: wrap, start: () => `top ${barH()}`, end: "+=250%", pin: true, scrub: 0.6, invalidateOnRefresh: true, refreshPriority: -1 },
-    });
-    // When the roles are taller than the window, the list drifts up as they arrive, so the newest sits in view
-    // and the last one ends 12px clear of the bottom edge.
-    const over = () => Math.max(0, list.offsetHeight - wrap.clientHeight + 24) / 2;
-    tl.set(items, { x: 60, opacity: 0 }, 0).set(y, { v: 2026 }, 0)
-      .fromTo(list, { y: over }, { y: () => -over(), ease: "none", duration: items.length - 0.4, immediateRender: false }, 0);
-    items.forEach((li, i) => {
-      tl.to(li, { x: 0, opacity: 1, duration: 0.6 }, i)
-        .to(y, { v: ROLES[i][0], duration: 0.6, ease: "none", onUpdate: () => (year.textContent = Math.round(y.v)), onStart: () => (label.textContent = ROLES[i][1]), onReverseComplete: () => (label.textContent = ROLES[Math.max(0, i - 1)][1]) }, i)
-        .to({}, { duration: 0.6, onUpdate() { light((i + this.progress()) / items.length); } }, i);
-      if (i > 0) tl.to(items.slice(0, i), { opacity: 0.45, duration: 0.4 }, i);
-    });
-    tl.to(items, { opacity: 1, duration: 0.4 }, items.length).to({}, { duration: 0.3 });
+    wrap.classList.add("has-year", "is-pinned");
     year.textContent = "2026";
     label.textContent = ROLES[0][1];
-    return () => { wrap.classList.remove("is-pinned"); G.set(items, { clearProps: "transform,opacity" }); G.set(list, { clearProps: "transform" }); };
+    const steps = items.length - 1;
+    const tl = G.timeline({
+      defaults: { ease: "power2.out" },
+      scrollTrigger: { trigger: wrap, start: () => `top ${barH()}`, end: "+=200%", pin: true, scrub: 0.6, invalidateOnRefresh: true, refreshPriority: 1 },
+    });
+    // When the roles are taller than the window, the list drifts up as they arrive, so the newest stays in view
+    const over = () => Math.max(0, list.offsetHeight - wrap.clientHeight + 24) / 2;
+    tl.set(items.slice(1), { x: 60, opacity: 0 }, 0)
+      .fromTo(list, { y: over }, { y: () => -over(), ease: "none", duration: steps + 0.4, immediateRender: false }, 0)
+      .to({}, { duration: 0.2, onUpdate() { light((0.6 * this.progress()) / items.length); } }, 0);
+    items.forEach((li, i) => {
+      if (!i) return;
+      const at = i - 0.8;
+      tl.to(li, { x: 0, opacity: 1, duration: 0.6 }, at)
+        .to(y, { v: ROLES[i][0], duration: 0.6, ease: "none", onUpdate: () => (year.textContent = Math.round(y.v)), onStart: () => (label.textContent = ROLES[i][1]), onReverseComplete: () => (label.textContent = ROLES[i - 1][1]) }, at)
+        .to({}, { duration: 0.6, onUpdate() { light((i + 0.6 * this.progress()) / items.length); } }, at)
+        .to(items.slice(0, i), { opacity: 0.7, duration: 0.4 }, at);
+    });
+    tl.to(items, { opacity: 1, duration: 0.4 }, steps).to({}, { duration: 0.3 });
+    return () => { wrap.classList.remove("has-year", "is-pinned"); G.set(items, { clearProps: "transform,opacity" }); G.set(list, { clearProps: "transform" }); };
   });
 
-  // Everywhere else: the line fills down to just past the middle of the window as you scroll.
+  // Wide screens too short to hold the section: the year stays beside the roles and counts back as each one reaches the middle
+  mm.add("(min-width: 56rem) and (max-height: 799.98px)", () => {
+    wrap.classList.add("has-year");
+    const triggers = items.map((li, i) => ScrollTrigger.create({ trigger: li, start: "top 55%", onEnter: () => countTo(i), onLeaveBack: () => countTo(Math.max(0, i - 1)) }));
+    return () => { wrap.classList.remove("has-year"); triggers.forEach((t) => t.kill()); };
+  });
+
+  // Wherever the section does not hold still: the line fills to just past the middle of the window, and each role slides in
+  // as it rises into view, fully readable by the time it reaches the lower third.
   mm.add("not all and (min-width: 56rem) and (min-height: 800px)", () => {
-    ScrollTrigger.create({ trigger: list, start: "top 60%", end: "bottom 60%", onUpdate: (self) => light(self.progress), onRefresh: (self) => light(self.progress) });
+    const fill = ScrollTrigger.create({ trigger: list, start: "top 60%", end: "bottom 60%", onUpdate: (self) => light(self.progress), onRefresh: (self) => light(self.progress) });
+    // Phones have no room beside the cards, so there they rise into place instead of sliding in from the right
+    const narrow = () => innerWidth < 640;
+    const arrive = items.map((li) => G.fromTo(li, { x: () => (narrow() ? 0 : 32), y: () => (narrow() ? 24 : 0), opacity: 0.3 }, { x: 0, y: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: li, start: "top 96%", end: "top 66%", scrub: 0.5, invalidateOnRefresh: true } }));
+    return () => {
+      fill.kill();
+      arrive.forEach((t) => { t.scrollTrigger.kill(); t.kill(); });
+      G.set(items, { clearProps: "transform,opacity" });
+    };
   });
 });
 
@@ -1485,4 +2105,15 @@ if (G) {
   if (document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
   window.addEventListener("load", () => ScrollTrigger.refresh());
 }
+
+// After a switch between Quick view and the full page, go back to the section the reader was on.
+window.addEventListener("load", () => {
+  let id = null;
+  try {
+    id = sessionStorage.getItem("view-return");
+    sessionStorage.removeItem("view-return");
+  } catch (e) {}
+  const el = id && document.getElementById(id);
+  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - barH(), behavior: "instant" });
+});
 })();

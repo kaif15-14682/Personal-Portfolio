@@ -5,3 +5,7 @@
 
 # Local browser-testing output
 /.playwright-mcp/
+
+# Local design and code-map tooling
+/.impeccable/
+/graphify-out/
