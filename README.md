@@ -35,7 +35,7 @@ index.html      Page content
 styles.css      Styles
 script.js       Interactions, scroll reveals, section rail and the satin background
 showpieces.js   Scroll stories, the hero panel, running mockups, case studies, skills map and RCM cycle ring
-assets/         CV, icons, share image and preview image
+assets/         Icons, share image and preview image
 ```
 
 ## Contact

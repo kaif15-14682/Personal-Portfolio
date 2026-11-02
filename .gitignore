@@ -9,3 +9,5 @@
 # Local design and code-map tooling
 /.impeccable/
 /graphify-out/
+# The CV is hosted on Google Drive, not in this repo
+/assets/Sheikh_Kaif_CV.pdf
