@@ -198,17 +198,29 @@ const markNav = () => {
   const id = atEnd ? "contact" : spied;
   [...navLinks, ...railLinks].forEach((a) => a.classList.toggle("is-current", a.getAttribute("href") === `#${id}`));
 };
+// Where each section starts and how long the page is, measured when the page changes size rather than on every scroll frame:
+// reading layout while the scroll stories animate makes the browser recompute it on the spot, which slower laptops can't afford.
+let viewH = window.innerHeight, maxScroll = 0, railTops = [], railShown = false;
+// Read as each scroll event arrives, before that frame's animations write anything (see scheduleScroll)
+let pageY = window.scrollY;
+const measurePage = () => {
+  viewH = window.innerHeight;
+  maxScroll = document.documentElement.scrollHeight - viewH;
+  railShown = rail.getClientRects().length > 0; // hidden below 80rem
+  // A pinned section is measured by its placeholder, which stays where the section belongs
+  railTops = railTargets.map((s) => (s ? (s.closest(".pin-spacer") || s).getBoundingClientRect().top + window.scrollY : Infinity));
+};
 // The rail's line reaches each dot as its section crosses 40% of the window, and fills between dots in proportion.
 const paintRail = () => {
-  if (!rail.getClientRects().length) return; // hidden below 80rem
-  const y = window.innerHeight * 0.4;
-  const tops = railTargets.map((s) => (s ? s.getBoundingClientRect().top : Infinity));
+  if (!railShown) return;
+  const y = viewH * 0.4;
+  const tops = railTops.map((t) => t - pageY);
   let i = 0;
   while (i < tops.length - 1 && tops[i + 1] <= y) i++;
   const span = tops[i + 1] - tops[i];
   const f = i < tops.length - 1 && span > 0 ? Math.max(0, Math.min(1, (y - tops[i]) / span)) : 0;
   const p = atEnd ? 1 : (i + f) / (tops.length - 1);
-  rail.firstElementChild.style.setProperty("--p", p.toFixed(4));
+  rail.firstElementChild.style.setProperty("--fill", p.toFixed(4));
 };
 if ("IntersectionObserver" in window && navLinks.length) {
   const sections = navLinks.map((a) => document.querySelector(a.getAttribute("href")));
@@ -278,6 +290,14 @@ if (term && !reduceMotion && "IntersectionObserver" in window) {
     tick();
   }, { threshold: 0.5 });
   io.observe(term);
+}
+
+/* ---------- Contact: its light drifts only while the card is near the screen (see .contact::before) ---------- */
+
+const contactCard = document.querySelector(".contact");
+if (contactCard) {
+  if ("IntersectionObserver" in window) new IntersectionObserver(([e]) => contactCard.classList.toggle("is-near", e.isIntersecting), { rootMargin: "200px 0px" }).observe(contactCard);
+  else contactCard.classList.add("is-near");
 }
 
 /* ---------- Copy email ---------- */
@@ -504,16 +524,22 @@ if (topbar) topbar.append(progress);
 let scrollFrame = 0;
 const paintScroll = () => {
   scrollFrame = 0;
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  const pageP = max > 0 ? window.scrollY / max : 0;
+  const pageP = maxScroll > 0 ? pageY / maxScroll : 0;
   progress.style.transform = `scaleX(${pageP.toFixed(4)})`;
-  const end = max > 0 && window.scrollY >= max - 2;
+  const end = maxScroll > 0 && pageY >= maxScroll - 2;
   if (end !== atEnd) { atEnd = end; markNav(); }
   paintRail();
 };
-const scheduleScroll = () => { if (!scrollFrame) scrollFrame = requestAnimationFrame(paintScroll); };
+const scheduleScroll = () => {
+  pageY = window.scrollY;
+  if (!scrollFrame) scrollFrame = requestAnimationFrame(paintScroll);
+};
 window.addEventListener("scroll", scheduleScroll, { passive: true });
-window.addEventListener("resize", scheduleScroll);
+const remeasure = () => { measurePage(); scheduleScroll(); };
+window.addEventListener("resize", remeasure);
+// The pinned stories, late fonts and a phone turning all change the page's length and where its sections sit
+if ("ResizeObserver" in window) new ResizeObserver(remeasure).observe(document.body);
+measurePage();
 paintScroll();
 
 /* ---------- Midnight satin behind the whole page ----------
@@ -624,7 +650,8 @@ void main() {
   let clock = 96, last = 0, frame = 0;
   // Pointer in canvas units (0 to 1, y up), eased toward its target each frame
   const ptr = { x: 0.7, y: 0.6, tx: 0.7, ty: 0.6, amp: 0, lit: 0, tlit: 0 };
-  let lastY = window.scrollY, boost = 0;
+  // Scroll position as of the last scroll event (pageY above), so drawing never asks the browser for fresh layout mid-frame
+  let lastY = pageY, boost = 0;
 
   // How far the intro has scrolled away: 0 at the top, 1 once its bottom passes under the top bar.
   // Measured from the pin's placeholder once showpieces.js has pinned the intro, so a moved intro never skews it.
@@ -637,8 +664,8 @@ void main() {
     heroEnd = Math.max(1, box.getBoundingClientRect().top + window.scrollY + hero.offsetHeight - 60);
   };
   const ease = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
-  const away = () => ease(window.scrollY / heroEnd);
-  const closing = () => ease((window.scrollY - endFrom) / (innerHeight * 1.2));
+  const away = () => ease(pageY / heroEnd);
+  const closing = () => ease((pageY - endFrom) / (viewH * 1.2));
 
   const draw = () => {
     const a = away();
@@ -659,13 +686,16 @@ void main() {
     measure();
     draw();
   };
+  // A case study covers the page with a blurred backdrop. The satin holds still under it, or the blur would be redone for every new frame.
+  let held = false;
   const loop = (now) => {
     frame = requestAnimationFrame(loop);
+    if (held) { last = now; return; }
     const dt = Math.min(now - last, 100);
     if (dt < 33) return;
     // Scroll speed in px per ms, eased so a flick speeds the folds up and they settle back
-    const v = Math.abs(window.scrollY - lastY) / dt;
-    lastY = window.scrollY;
+    const v = Math.abs(pageY - lastY) / dt;
+    lastY = pageY;
     boost += (Math.min(v * 4, 10) - boost) * 0.15;
     clock += (dt / 1000) * (SILK.speed + boost);
     ptr.x += (ptr.tx - ptr.x) * 0.12;
@@ -697,6 +727,8 @@ void main() {
     });
     hero.addEventListener("pointerleave", () => { ptr.tx = 0.7; ptr.ty = 0.6; ptr.tlit = 0; });
   }
+  window.addEventListener("case:open", () => { held = true; });
+  window.addEventListener("case:close", () => { held = false; });
   last = performance.now();
   frame = requestAnimationFrame(loop);
 })();

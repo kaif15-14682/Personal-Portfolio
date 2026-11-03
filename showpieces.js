@@ -22,7 +22,10 @@ const watch = (el, onIn, onOut, threshold = 0.25) => {
   if (!("IntersectionObserver" in window)) { onIn(); return; }
   new IntersectionObserver(([e]) => (e.isIntersecting ? onIn() : onOut && onOut()), { threshold }).observe(el);
 };
-const fmt = (n) => Math.round(n).toLocaleString("en-US");
+const NUM = new Intl.NumberFormat("en-US");
+const fmt = (n) => NUM.format(Math.round(n));
+// Scroll-driven numbers are set on every frame. Writing the same text again still makes the browser lay out and redraw, so only changes are written.
+const setText = (el, text) => { if (el.textContent !== text) el.textContent = text; };
 // Work that can wait: done while the browser is idle, never during page load (a short delay where idle callbacks are missing)
 const whenIdle = (fn, timeout = 4000) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout }) : setTimeout(fn, 1500));
 const barH = () => (document.querySelector(".topbar") || {}).offsetHeight || 0;
@@ -73,6 +76,8 @@ safe("pools", () => {
       pool.style.setProperty("--x", x);
       section.prepend(pool);
       if (!MOTION || !G) return;
+      // On a layer of its own the pool is moved, not redrawn: repainting a screen-wide gradient every frame is heavy work for a laptop's graphics chip.
+      pool.style.willChange = "transform";
       // Measured after the pinned sections, which add scroll space above most of these
       G.fromTo(pool, { y: -speed * 300 }, { y: speed * 300, ease: "none", scrollTrigger: { trigger: section, start: "top bottom", end: "bottom top", scrub: true, refreshPriority: -2 } });
     });
@@ -96,6 +101,8 @@ safe("hero", () => {
       pin: true, pinSpacing: false, scrub: 0.5, invalidateOnRefresh: true,
     },
   });
+  // These shrink as the intro is covered. Without their own layers the browser redraws them at every new size, on every frame.
+  G.set(".hero__text, .hero .lead, .hpanel", { willChange: "transform" });
   // Explicit start values: these elements are still mid-entrance (hidden) when the timeline is built,
   // and a plain .to() would record that hidden state as the place to scroll back to.
   tl.fromTo(".hero__text, .hero .lead", { scale: 1, y: 0, opacity: 1 }, { scale: 0.9, y: -40, opacity: 0, transformOrigin: "0% 50%" }, 0);
@@ -741,6 +748,8 @@ safe("cases", () => {
     caseEl.scrollTop = 0;
     document.documentElement.style.overflow = "hidden";
     if (lenis) lenis.stop();
+    // The satin behind the page holds still under the blurred backdrop (script.js), so the blur isn't recomputed for every frame of it
+    window.dispatchEvent(new Event("case:open"));
     const last = caseEl.getBoundingClientRect();
     closeBtn.focus({ preventScroll: true, focusVisible: false });
     if (!MOTION) { busy = false; return; }
@@ -761,6 +770,7 @@ safe("cases", () => {
       card.style.visibility = "";
       document.documentElement.style.overflow = "";
       if (lenis) lenis.start();
+      window.dispatchEvent(new Event("case:close"));
       openCard = content = null;
       busy = false;
       if (after) { const go = after; after = null; go(); }
@@ -1662,22 +1672,28 @@ safe("story", () => {
   };
   whenIdle(paintTiles, 4000);
   watch($("#story"), paintTiles, null, 0);
-  const steps = [...document.querySelectorAll("#story-steps li")];
+  const steps = [...document.querySelectorAll("#story-steps li")], size = $("#tsize");
+  // Called on every scroll frame; the page is only touched when the step changes
+  let shownStep = -1;
   const setStep = (k) => {
+    if (k === shownStep) return;
+    shownStep = k;
     steps.forEach((li, i) => { li.classList.toggle("on", i === k); li.classList.toggle("done", i < k); });
-    $("#tsize").textContent = k >= 1 ? "224 × 224" : "512 × 512";
+    size.textContent = k >= 1 ? "224 × 224" : "512 × 512";
   };
   if (!MOTION || !G) { setStep(5); return; }
 
   $("#story").classList.add("is-pinned");
+  // The tile shrinks as the story runs. On its own layer it is scaled as it is, instead of being redrawn at every size.
+  G.set("#tframe", { willChange: "transform" });
   const img = $("#c-img"), acc = $("#c-acc");
   // The numbers are read off the timeline's own clock, so they always match the step on screen,
   // including just before the story starts (images grow from 4 to 5, accuracy counts up from 5.1 to 5.9)
   const accEase = G.parseEase("power1.out");
   const paint = (t) => {
-    img.textContent = fmt(10616 + (53080 - 10616) * Math.min(1, Math.max(0, t - 4)));
+    setText(img, fmt(10616 + (53080 - 10616) * Math.min(1, Math.max(0, t - 4))));
     const k = (t - 5.1) / 0.8;
-    acc.textContent = k < 0 ? "–" : `${(96.07 + (99.83 - 96.07) * accEase(Math.min(1, k))).toFixed(2)}%`;
+    setText(acc, k < 0 ? "–" : `${(96.07 + (99.83 - 96.07) * accEase(Math.min(1, k))).toFixed(2)}%`);
   };
   const offsets = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
   const tl = G.timeline({
@@ -1751,27 +1767,37 @@ safe("dots", () => {
   const fillAlpha = (i, st) => (i >= REAL ? (st >= 4 ? 0.35 : 0) : 1);
   const ringAlpha = (i, st) => (i < YES && st === 3 ? 1 : i >= REAL && st >= 4 ? 0.9 : 0);
   let u = 3;
+  // Colour, fill and ring depend only on the group a dot belongs to (stroke, no stroke, synthetic), so each group is one path:
+  // a few fills per frame instead of one fill and one colour string for each of the 2,408 dots.
+  const GROUPS = [[0, YES], [YES, REAL], [REAL, N]];
   const draw = () => {
     let a = Math.min(3, Math.floor(u)), t = ease(Math.max(0, Math.min(1, (u - a - 0.15) / 0.7)));
     if (u >= 4) { a = 3; t = 1; }
-    const b = a + 1, R = mix(rad[a], rad[b], t);
+    const b = a + 1, R = mix(rad[a], rad[b], t), pa = pos[a], pb = pos[b];
+    const trace = (from, to, r) => {
+      ctx.beginPath();
+      for (let i = from; i < to; i++) {
+        const x = mix(pa[i][0], pb[i][0], t), y = mix(pa[i][1], pb[i][1], t);
+        ctx.moveTo(x + r, y); // each circle starts its own outline, so no line joins it to the last one
+        ctx.arc(x, y, r, 0, 7);
+      }
+    };
     ctx.clearRect(0, 0, W, H);
-    for (let i = 0; i < N; i++) {
-      const fa = mix(fillAlpha(i, a), fillAlpha(i, b), t), ra = mix(ringAlpha(i, a), ringAlpha(i, b), t);
-      if (fa < 0.01 && ra < 0.01) continue;
-      const x = mix(pos[a][i][0], pos[b][i][0], t), y = mix(pos[a][i][1], pos[b][i][1], t);
-      const ca = colorOf(i, a), cb = colorOf(i, b);
-      const rgb = `${mix(ca[0], cb[0], t) | 0},${mix(ca[1], cb[1], t) | 0},${mix(ca[2], cb[2], t) | 0}`;
+    ctx.lineWidth = 1;
+    GROUPS.forEach(([from, to]) => {
+      const fa = mix(fillAlpha(from, a), fillAlpha(from, b), t), ra = mix(ringAlpha(from, a), ringAlpha(from, b), t);
       if (fa > 0.01) {
-        ctx.fillStyle = `rgba(${rgb},${fa})`;
-        ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill();
+        const ca = colorOf(from, a), cb = colorOf(from, b);
+        ctx.fillStyle = `rgba(${mix(ca[0], cb[0], t) | 0},${mix(ca[1], cb[1], t) | 0},${mix(ca[2], cb[2], t) | 0},${fa})`;
+        trace(from, to, R);
+        ctx.fill();
       }
       if (ra > 0.01) {
         ctx.strokeStyle = `rgba(255,105,97,${ra})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(x, y, R + (i < REAL ? 1.6 : 0), 0, 7); ctx.stroke();
+        trace(from, to, R + (from < REAL ? 1.6 : 0));
+        ctx.stroke();
       }
-    }
+    });
     ctx.font = "500 12px 'IBM Plex Sans', system-ui, sans-serif";
     const show = (set, alpha) => set.forEach(([x, y, text, side]) => {
       ctx.fillStyle = `rgba(161,161,166,${alpha})`;
@@ -1783,8 +1809,12 @@ safe("dots", () => {
   };
   const steps = [...document.querySelectorAll("#dots-steps li")];
   const acc = $("#d-acc"), rec = $("#d-rec");
+  // Called on every scroll frame; the page is only touched when the step changes
+  let shownStep = -1;
   const sync = () => {
     const k = Math.max(0, Math.min(4, Math.round(u)));
+    if (k === shownStep) return;
+    shownStep = k;
     steps.forEach((li, i) => { li.classList.toggle("on", i === k); li.classList.toggle("done", i < k); });
     acc.textContent = k >= 3 ? "94.2%" : "–";
     rec.textContent = k >= 3 ? "0 of 74" : "–";
@@ -1835,7 +1865,7 @@ safe("claim", () => {
   const bars = [...document.querySelectorAll("#cl-track i")];
   const days = $("#cl-days"), bal = $("#cl-bal");
   const n = { days: 0, bal: 155 };
-  const paint = () => { days.textContent = Math.round(n.days); bal.textContent = `$${n.bal.toFixed(2)}`; };
+  const paint = () => { setText(days, String(Math.round(n.days))); setText(bal, `$${n.bal.toFixed(2)}`); };
   // [from time, step, pill text, pill tone, route note, packet tone]
   const STATES = [
     [0, 0, "Draft", "", "", ""],
@@ -1921,9 +1951,14 @@ safe("cycle", () => {
   });
   const num = $("#cy-n"), title = $("#cy-t");
   let last = -1;
+  // The ring runs every frame while in view, but a segment is only redrawn when its sweep has actually moved
+  const offsets = fills.map(() => "1");
   // k: the stage in progress, f: how far through it (0–1)
   const show = (k, f) => {
-    fills.forEach((p, i) => p.setAttribute("stroke-dashoffset", i === k ? (1 - f).toFixed(3) : 1));
+    fills.forEach((p, i) => {
+      const v = i === k ? (1 - f).toFixed(3) : "1";
+      if (v !== offsets[i]) { offsets[i] = v; p.setAttribute("stroke-dashoffset", v); }
+    });
     if (k === last) return;
     last = k;
     segs.forEach((s, i) => s.classList.toggle("done", i < k));
@@ -2037,15 +2072,24 @@ safe("timeline", () => {
   // Newest first, so the year counts back as you read down.
   const ROLES = [[2026, "RCM training at DocPro Health"], [2026, "Workflow automation in Retool"], [2025, "Thesis research"], [2024, "Sales"], [2019, "Started tutoring"]];
   list.classList.add("is-live");
+  // The list is measured once each time its size changes, never on a scroll frame: reading layout mid-animation makes the browser
+  // recompute it on the spot. The fill is a property that doesn't pass down (styles.css), so changing it restyles the line alone.
+  let lineH = 0, dotY = [];
+  new ResizeObserver(() => { lineH = 0; }).observe(list);
+  const lit = items.map((li) => li.classList.contains("is-lit"));
   const light = (p) => {
-    list.style.setProperty("--p", p.toFixed(4));
-    const lineH = list.offsetHeight - 16;
-    items.forEach((li) => li.classList.toggle("is-lit", li.offsetTop + 26 <= 8 + p * lineH)); // 26px: centre of each dot
+    if (!lineH) { lineH = list.offsetHeight - 16; dotY = items.map((li) => li.offsetTop + 26); } // 26px: centre of each dot
+    list.style.setProperty("--fill", p.toFixed(4));
+    items.forEach((li, i) => {
+      const on = dotY[i] <= 8 + p * lineH;
+      if (on !== lit[i]) { lit[i] = on; li.classList.toggle("is-lit", on); }
+    });
   };
   const y = { v: 2026 };
+  const showYear = () => setText(year, String(Math.round(y.v)));
   const countTo = (i) => {
     label.textContent = ROLES[i][1];
-    G.to(y, { v: ROLES[i][0], duration: 0.6, ease: "power2.out", overwrite: true, onUpdate: () => (year.textContent = Math.round(y.v)) });
+    G.to(y, { v: ROLES[i][0], duration: 0.6, ease: "power2.out", overwrite: true, onUpdate: showYear });
   };
 
   // Tall wide screens: the section holds still while the roles slide in one by one and the year counts back.
@@ -2069,7 +2113,7 @@ safe("timeline", () => {
       if (!i) return;
       const at = i - 0.8;
       tl.to(li, { x: 0, opacity: 1, duration: 0.6 }, at)
-        .to(y, { v: ROLES[i][0], duration: 0.6, ease: "none", onUpdate: () => (year.textContent = Math.round(y.v)), onStart: () => (label.textContent = ROLES[i][1]), onReverseComplete: () => (label.textContent = ROLES[i - 1][1]) }, at)
+        .to(y, { v: ROLES[i][0], duration: 0.6, ease: "none", onUpdate: showYear, onStart: () => (label.textContent = ROLES[i][1]), onReverseComplete: () => (label.textContent = ROLES[i - 1][1]) }, at)
         .to({}, { duration: 0.6, onUpdate() { light((i + 0.6 * this.progress()) / items.length); } }, at)
         .to(items.slice(0, i), { opacity: 0.7, duration: 0.4 }, at);
     });
@@ -2087,15 +2131,13 @@ safe("timeline", () => {
   // Wherever the section does not hold still: the line fills to just past the middle of the window, and each role slides in
   // as it rises into view, fully readable by the time it reaches the lower third.
   mm.add("not all and (min-width: 56rem) and (min-height: 800px)", () => {
-    const fill = ScrollTrigger.create({ trigger: list, start: "top 60%", end: "bottom 60%", onUpdate: (self) => light(self.progress), onRefresh: (self) => light(self.progress) });
+    ScrollTrigger.create({ trigger: list, start: "top 60%", end: "bottom 60%", onUpdate: (self) => light(self.progress), onRefresh: (self) => light(self.progress) });
     // Phones have no room beside the cards, so there they rise into place instead of sliding in from the right
     const narrow = () => innerWidth < 640;
-    const arrive = items.map((li) => G.fromTo(li, { x: () => (narrow() ? 0 : 32), y: () => (narrow() ? 24 : 0), opacity: 0.3 }, { x: 0, y: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: li, start: "top 96%", end: "top 66%", scrub: 0.5, invalidateOnRefresh: true } }));
-    return () => {
-      fill.kill();
-      arrive.forEach((t) => { t.scrollTrigger.kill(); t.kill(); });
-      G.set(items, { clearProps: "transform,opacity" });
-    };
+    items.forEach((li) => G.fromTo(li, { x: () => (narrow() ? 0 : 32), y: () => (narrow() ? 24 : 0), opacity: 0.3 }, { x: 0, y: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: li, start: "top 96%", end: "top 66%", scrub: 0.5, invalidateOnRefresh: true } }));
+    // The media query has already reverted the trigger and tweens made above by the time this runs (their scrollTrigger is null by then),
+    // so killing them again threw, and the error stopped the other stories from switching layout when the window grew past 800px tall.
+    return () => G.set(items, { clearProps: "transform,opacity" });
   });
 });
 
