@@ -9,7 +9,7 @@ Personal portfolio of Sheikh Kaif, a CSE graduate who builds the systems behind 
 ## What's inside
 
 - **Hero:** a live diagram of the work. Claims, tissue slides and patient records flow into a pipeline that steps through cleaning, joining, training and charting, and out come a Retool dashboard, a ProstadeNet grade and a paid claim. A ribbon of light runs through the whole page.
-- **Projects:** a Laravel school management system, operations dashboards, the ProstadeNet thesis, Flutter apps, stroke risk prediction and a Bash password manager, each with a live visual and links to how it works and to the code. Competitions from 2021 to 2025 close the list.
+- **Projects:** a Laravel school management system, operations dashboards, the ProstadeNet thesis, Flutter apps, stroke risk prediction, a Bash password manager and the Yui & Kai planner (a shared planner for two people on shift work), each with a live visual and links to how it works and to the code. Competitions from 2021 to 2025 close the list.
 - **Experience:** five roles on a timeline. The light becomes the timeline's line, and each role charges in as you reach it.
 - **Skills:** each skill, and where it was used.
 - **ProstadeNet:** a tissue slide on its way to a grade, with feature maps computed in your browser, and the ten tuning steps that got there.
