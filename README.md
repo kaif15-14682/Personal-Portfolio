@@ -1,6 +1,6 @@
 # Sheikh Kaif – Portfolio
 
-Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tools, mobile apps and machine learning, currently training in revenue cycle management at DocPro Health.
+Personal portfolio of Sheikh Kaif, a CSE graduate who builds the systems behind healthcare data: Laravel and SQL backends, Retool dashboards and machine learning models. Currently training in revenue cycle management at DocPro Health.
 
 **Live site:** https://kaif15-14682.github.io/Personal-Portfolio/
 
@@ -8,16 +8,23 @@ Personal portfolio of Sheikh Kaif, a CSE graduate working on backends, data tool
 
 ## What's inside
 
-- **Projects:** a Laravel school management system, Retool dashboards, the ProstadeNet thesis, Flutter apps, a stroke prediction notebook and a Bash password manager, each with a live visual. The three biggest open into a 20-second case study that plays on its own, followed by a hands-on demo.
-- **Experience, skills map and education:** every skill linked to the projects and roles that used it.
-- **How they work:** four scroll stories. A request travels through the school system's layers, a tissue tile goes through the thesis pipeline, a dot chart shows why 94% accuracy wasn't enough, and a sample medical claim moves through the revenue cycle, from eligibility and CPT/ICD-10-CM coding to denial, resubmission and payment.
+- **Hero:** a live diagram of the work. Claims, tissue slides and patient records flow into a pipeline that steps through cleaning, joining, training and charting, and out come a Retool dashboard, a ProstadeNet grade and a paid claim. A ribbon of light runs through the whole page.
+- **Projects:** a Laravel school management system, operations dashboards, the ProstadeNet thesis, Flutter apps, stroke risk prediction and a Bash password manager, each with a live visual and links to how it works and to the code. Competitions from 2021 to 2025 close the list.
+- **Experience:** five roles on a timeline. The light becomes the timeline's line, and each role charges in as you reach it.
+- **Skills:** each skill, and where it was used.
+- **ProstadeNet:** a tissue slide on its way to a grade, with feature maps computed in your browser, and the ten tuning steps that got there.
+- **Dashboards:** a Monday, seen from the Retool and SQL dashboards.
+- **Stroke risk prediction:** why 94% accuracy wasn't enough.
+- **Numbers from the projects, the Laravel system from the screen down to the database, and one medical claim from the front desk to paid.**
 - **Contact.**
 
-**Quick view:** the button in the top bar shows the whole page at once, without the scroll stories. Add `?quick` to the link to open it that way.
+**Quick view:** the button in the top bar turns off the intro and the scroll animations and shows the whole page at once.
 
 ## Tech
 
-HTML, CSS and plain JavaScript, with WebGL for the midnight satin behind the page. GSAP with ScrollTrigger drives the scroll stories and Lenis smooths scrolling, both loaded from a CDN. No framework and no build step.
+One HTML file with plain CSS and JavaScript: no framework and no build step. A small WebGL2 renderer draws the ribbon of light. GSAP with ScrollTrigger drives the pinned sections and Lenis smooths scrolling, both loaded from a CDN. The fonts are Geist, Geist Mono and Instrument Serif from Google Fonts.
+
+The page follows the reduced-motion setting, and the footer shows the page's weight and load time, measured in your browser.
 
 ## Run locally
 
@@ -31,11 +38,8 @@ Open `index.html` in a browser.
 ## Structure
 
 ```
-index.html      Page content
-styles.css      Styles
-script.js       Interactions, scroll reveals, section rail and the satin background
-showpieces.js   Scroll stories, the hero panel, running mockups, case studies, skills map and RCM cycle ring
-assets/         Icons, share image and preview image
+index.html   The whole site: markup, styles and scripts
+assets/      Tab and home-screen icons, share image and preview image
 ```
 
 ## Contact

@@ -11,3 +11,7 @@
 /graphify-out/
 # The CV is hosted on Google Drive, not in this repo
 /assets/Sheikh_Kaif_CV.pdf
+
+# Personal image used only in the local demo; not for publishing
+/Whitebeard-Pirates-Tattoo-1.webp
+/1.jpg
