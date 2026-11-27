@@ -21,17 +21,22 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<!-- One request for all three families, not three -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap">
-<!-- The motion libraries download alongside the page instead of after it -->
-<!-- The integrity hashes make the browser refuse a CDN file that has changed; the preloads need the same ones to be reused -->
-<link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous">
-<link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous">
-<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed" crossorigin="anonymous">
+<!-- Fonts and motion libraries are served from this site, not from four other servers: on a slow phone network each
+     new server costs a few round trips before the hero can show. All three fonts appear above the fold. -->
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/geist-latin-wght-normal.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/instrument-serif-latin-400-italic.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/geist-mono-latin-wght-normal.woff2" crossorigin>
+<link rel="preload" as="script" href="assets/js/gsap.min.js">
+<link rel="preload" as="script" href="assets/js/ScrollTrigger.min.js">
+<link rel="preload" as="script" href="assets/js/lenis.min.js">
 <style>
+/* Geist, Geist Mono and Instrument Serif (SIL Open Font License, see assets/fonts), latin subset. One variable file
+   covers every weight of each. The serif's italic is in the headline, so it is preloaded; its upright face is only
+   in two small labels further down, so the browser fetches it when they first show */
+@font-face{font-family:"Instrument Serif";font-style:normal;font-weight:400;font-display:swap;src:url(assets/fonts/instrument-serif-latin-400-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Geist";font-style:normal;font-weight:100 900;font-display:swap;src:url(assets/fonts/geist-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Geist Mono";font-style:normal;font-weight:100 900;font-display:swap;src:url(assets/fonts/geist-mono-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Instrument Serif";font-style:italic;font-weight:400;font-display:swap;src:url(assets/fonts/instrument-serif-latin-400-italic.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 /* Layout: one dark stage with a fixed WebGL glow behind everything; content sits in a 1320px column and the two pinned scenes run full-bleed */
 :root{
   color-scheme:dark;
@@ -116,7 +121,15 @@ em .ch:last-child{padding-right:.06em}
 .hero__stack{margin-top:26px;color:var(--faint);font-size:12.5px;letter-spacing:.02em}
 
 /* Hero diagram: data in, my systems in the middle, results out */
-.flow-wrap{min-width:0;justify-self:end;width:100%;max-width:610px}
+.flow-wrap{position:relative;min-width:0;justify-self:end;width:100%;max-width:610px}
+/* The card that opens beside a pointed-at card: what the lane does, and where a click goes */
+.flow__tip{position:absolute;z-index:6;width:min(272px,80%);padding:12px 14px 13px;border:1px solid rgb(var(--accent-rgb)/.45);border-radius:12px;background:var(--card-2);box-shadow:0 22px 50px -20px rgba(0,0,0,.9);pointer-events:none;visibility:hidden;opacity:0;transform:translateY(4px);transition:opacity .2s,transform .25s var(--ease),visibility 0s .25s}
+.flow__tip.is-on{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .25s var(--ease),visibility 0s}
+.flow__tip b{display:block;font:600 13.5px/1.3 var(--display);color:var(--fg)}
+.flow__tip span{display:block;margin-top:5px;color:var(--muted);font-size:13px;line-height:1.45}
+.flow__tip small{display:block;margin-top:9px;font:500 11.5px/1 var(--mono);color:var(--accent)}
+/* With a mouse the cards explain themselves on hover, so the caption is hidden; touch screens keep it */
+@media (hover:hover) and (pointer:fine){.flow__cap{display:none}}
 .flow{position:relative;width:100%;aspect-ratio:1.16;transform:perspective(1200px) rotateX(var(--fx,0deg)) rotateY(var(--fy,0deg));transform-style:preserve-3d;transition:transform .9s var(--ease)}
 .flow__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .wire{fill:none;stroke:var(--line-2);stroke-width:1.25}
@@ -129,8 +142,25 @@ em .ch:last-child{padding-right:.06em}
 .is-off .wire-flow,.is-off .scan,.is-off .ph__timer i,.is-off .caret,.is-off .run .ck{animation-play-state:paused}
 .in1{--x:14.5%;--y:17%}.in2{--x:14.5%;--y:50%}.in3{--x:14.5%;--y:83%}
 .out1{--x:85.5%;--y:17%}.out2{--x:85.5%;--y:50%}.out3{--x:85.5%;--y:83%}
-.node{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%) translateZ(28px);width:clamp(118px,27%,172px);padding:11px 13px 12px;border:1px solid var(--line-2);border-radius:12px;background:var(--card-2);box-shadow:0 18px 40px -18px rgba(0,0,0,.85)}
-.node b{display:block;font:600 13.5px/1.2 var(--display);letter-spacing:-.01em}
+.node{position:absolute;left:var(--x);top:var(--y);transform:translate(-50%,-50%) translateZ(28px);width:clamp(118px,27%,172px);padding:11px 13px 12px;border:1px solid var(--line-2);border-radius:12px;background:var(--card-2);box-shadow:0 18px 40px -18px rgba(0,0,0,.85);color:inherit;text-decoration:none;cursor:pointer;transition:border-color .35s,box-shadow .35s}
+.node:focus-visible{border-radius:12px}
+.node b{display:block;font:600 13.5px/1.2 var(--display);letter-spacing:-.01em;transition:color .35s}
+/* One lane at a time is lit: its two cards and its two wires; the others step back. GSAP owns the cards' opacity, so
+   the dimming is done with colour on the cards and opacity on the wire groups only */
+.flow .lane{transition:opacity .45s}
+.flow[data-on] .lane{opacity:.2}
+.flow[data-on="0"] .lane[data-l="0"],.flow[data-on="1"] .lane[data-l="1"],.flow[data-on="2"] .lane[data-l="2"]{opacity:1}
+.flow[data-on] .node b{color:var(--muted)}
+.flow[data-on="0"] .node[data-l="0"],.flow[data-on="1"] .node[data-l="1"],.flow[data-on="2"] .node[data-l="2"]{border-color:rgb(var(--accent-rgb)/.6);box-shadow:0 0 0 3px rgb(var(--accent-rgb)/.08),0 18px 40px -18px rgba(0,0,0,.85)}
+.flow[data-on="0"] .node[data-l="0"] b,.flow[data-on="1"] .node[data-l="1"] b,.flow[data-on="2"] .node[data-l="2"] b{color:var(--fg)}
+.flow__cols{position:absolute;inset:0;margin:0;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-shadow:0 0 10px var(--bg),0 0 3px var(--bg),0 0 2px var(--bg);pointer-events:none}
+.flow__cols span{position:absolute;top:0;translate:-50% 0;white-space:nowrap}
+.flow__cols span:nth-child(1){left:14.5%}.flow__cols span:nth-child(2){left:50%;top:calc(50% - 62px)}.flow__cols span:nth-child(3){left:85.5%}
+.flow__cap{max-width:34em;min-height:4.6em;margin:16px auto 0;padding:8px 14px;border-radius:12px;background:color-mix(in srgb,var(--bg) 78%,transparent);color:var(--muted);font-size:14px;line-height:1.5;text-align:center;text-wrap:pretty;text-shadow:0 0 12px var(--bg)}
+.flow__cap b{color:var(--fg);font-weight:600}
+.flow__cap a{color:var(--accent);font-weight:500;text-decoration:none;white-space:nowrap}
+.flow__cap a::after{content:" \2193"}
+.flow__cap a:hover{text-decoration:underline}
 .node small{display:block;margin-top:5px;font:500 11.5px/1.3 var(--mono);color:var(--muted)}
 .node .ok{font-family:inherit;font-style:normal;color:var(--good)}
 .node__k{display:block;margin-bottom:6px;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
@@ -175,6 +205,18 @@ em .ch:last-child{padding-right:.06em}
 .card__label{color:var(--muted);font-size:14.5px;line-height:1.45}
 .card__title{margin-top:auto;padding-top:16px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
 .card__title span{font:500 11.5px/1 var(--mono);color:var(--faint);letter-spacing:.03em;white-space:nowrap}
+.card__desc{color:var(--muted);font-size:14px;line-height:1.5;text-wrap:pretty}
+/* The whole card opens its first link; any other link sits above that and still works on its own */
+.card__links a:first-child::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.card__links a + a{position:relative;z-index:1}
+.card__in:has(.card__links a:first-child:focus-visible){border-color:var(--accent)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:40px}
+.filters button{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border:1px solid var(--line-2);border-radius:999px;background:color-mix(in srgb,var(--raise) 82%,transparent);color:var(--muted);font:500 14px/1 var(--display);cursor:pointer;transition:color .2s,border-color .2s,background-color .2s}
+.filters button:hover{color:var(--fg);border-color:rgb(var(--accent-rgb)/.45)}
+.filters button span{font:500 11.5px/1 var(--mono);color:var(--faint)}
+.filters button[aria-pressed="true"]{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.filters button[aria-pressed="true"] span{color:var(--accent-ink);opacity:.7}
+.filters + .cards{margin-top:20px}
 .routes{list-style:none;margin:0;padding:16px 16px;display:grid;gap:5px;font:500 11.5px/1 var(--mono)}
 .routes li{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;color:var(--muted);transition:background-color .45s,color .45s}
 .routes li.is-on{background:rgb(var(--accent-rgb)/.1);color:var(--fg)}
@@ -214,7 +256,7 @@ em .ch:last-child{padding-right:.06em}
 .viz-dots p{font:500 11px/1.3 var(--mono);color:var(--muted)}
 .viz-dots p b{color:var(--bad);font-weight:500}
 .viz-term{padding:15px 18px;font:500 11.5px/1.6 var(--mono);color:var(--muted);white-space:pre-wrap}
-.viz-term b{color:var(--fg);font-weight:500}.viz-term .g{color:var(--good)}
+.viz-term b{color:var(--fg);font-weight:500}.viz-term .g{color:var(--good)}.viz-term .y{color:var(--warn)}
 /* The planner gets a full-width card: one day of two schedules, and the window when both are free */
 .card--wide{grid-column:1 / -1}
 .card--wide .card__in{flex-direction:row}
@@ -340,7 +382,7 @@ em .ch:last-child{padding-right:.06em}
 .grades{width:clamp(220px,21vw,280px);padding:16px 16px 14px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025)}
 .grades__h{display:flex;justify-content:space-between;gap:12px;font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .grades ol{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
-.grades li{display:grid;grid-template-columns:54px minmax(0,1fr) 34px;align-items:center;gap:10px;font:500 11.5px/1 var(--mono);color:var(--muted)}
+.grades li{display:grid;grid-template-columns:54px minmax(0,1fr) 42px;align-items:center;gap:10px;font:500 11.5px/1 var(--mono);color:var(--muted)}
 .grades li > i{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
 .grades li > i b{display:block;width:100%;height:100%;border-radius:3px;background:rgb(var(--map)/.45);transform-origin:left;transform:scaleX(var(--p))}
 .grades li em{font-style:normal;text-align:right;color:var(--fg)}
@@ -348,7 +390,12 @@ em .ch:last-child{padding-right:.06em}
 .grades li.top > i b{background:rgb(var(--map));box-shadow:0 0 10px rgb(var(--map)/.7)}
 .pred{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:15px;font-weight:600;letter-spacing:-.01em}
 .pred b{color:#5cb0ff;font-weight:600}
-.pred small{display:block;margin-top:4px;font:500 10.5px/1.35 var(--mono);color:var(--faint)}
+.pred small{display:block;margin-top:4px;font:500 10.5px/1.35 var(--mono);color:var(--muted)}
+.tiles{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tiles span{flex-basis:100%;margin-bottom:2px;font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.tiles button{flex:1;min-width:0;height:32px;padding:0;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:transparent;color:var(--muted);font:500 12.5px/1 var(--mono);cursor:pointer;transition:color .2s,border-color .2s,background-color .2s}
+.tiles button:hover{color:var(--fg);border-color:rgb(var(--map)/.6)}
+.tiles button[aria-pressed="true"]{background:rgb(var(--map));border-color:rgb(var(--map));color:#04070c}
 .net__foot{display:grid;grid-template-columns:minmax(0,1fr);gap:14px 32px;align-items:end;margin-top:clamp(16px,3vh,32px)}
 .steps.steps--row{grid-template-columns:repeat(5,minmax(0,1fr));max-width:none;margin:0}
 .steps.steps--row li{align-items:start}
@@ -356,37 +403,58 @@ em .ch:last-child{padding-right:.06em}
 .cnn__layer--dense .cnn__label{left:auto;right:-2px;text-align:right}
 
 /* Dashboards */
-.bento{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin-top:56px}
-.panel{grid-column:span 4;min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 18px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
-.panel--5{grid-column:span 5}.panel--3{grid-column:span 3}
+/* Dashboards: a case study in three steps over one board */
+.case{margin-top:48px}
+.case__steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.case__steps button{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:4px 12px;padding:14px 16px;border:1px solid var(--line-2);border-radius:14px;background:var(--card);color:var(--muted);text-align:left;cursor:pointer;transition:border-color .25s,background-color .25s}
+.case__steps b{grid-row:span 2;font:500 12px/1 var(--mono);color:var(--faint)}
+.case__steps span{font:600 15.5px/1.2 var(--display);letter-spacing:-.01em;color:var(--fg)}
+.case__steps small{font:500 12px/1.3 var(--mono);color:var(--faint)}
+.case__steps button:hover{border-color:rgb(var(--accent-rgb)/.45)}
+.case__steps button[aria-pressed="true"]{border-color:var(--accent);background:rgb(var(--accent-rgb)/.08)}
+.case__steps button[aria-pressed="true"] b{color:var(--accent)}
+.case__say{max-width:62em;min-height:4.8em;margin-top:18px;color:var(--muted);font-size:15.5px;line-height:1.6;text-wrap:pretty;text-shadow:0 0 16px var(--bg),0 0 4px var(--bg)}
+.case__say b{color:var(--fg);font-weight:600}
+.case__board{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin-top:14px}
+.panel{min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 18px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);transition:border-color .35s}
 .panel__head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .panel__head h3{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
 .panel__head span{font:500 11.5px/1 var(--mono);color:var(--faint);white-space:nowrap}
 .panel svg{width:100%;height:auto;display:block;overflow:visible}
+.kpis{grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kpi{gap:8px}
+.kpi > span{font:500 11px/1.2 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.kpi b{font-size:clamp(1.7rem,2.4vw,2.3rem);font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.kpi em{font:500 12.5px/1.3 var(--mono);font-style:normal;color:var(--muted)}
+.kpi em.down{color:var(--bad)}.kpi em.up{color:var(--good)}
+.kpi.is-hot{border-color:rgb(var(--accent-rgb)/.65)}
+.case__trend{grid-column:span 5}.case__heat{grid-column:span 7}.case__sql{grid-column:span 7}.case__wf{grid-column:span 5}
 .ax{font:500 10px var(--mono);fill:var(--faint)}
 .ax--hot{fill:var(--fg)}
 .gridl{stroke:var(--line);stroke-width:1}
-.bar{fill:rgb(var(--accent-rgb)/.32)}
-.bar.hot{fill:var(--accent)}
 .lnc{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.ar-fill{fill:url(#arFill)}
-.st1{stop-color:var(--accent);stop-opacity:.28}.st2{stop-color:var(--accent);stop-opacity:0}
-.endpt{fill:var(--accent)}
-.donut{display:grid;place-items:center;flex:1}
-.donut svg{width:min(172px,100%)}
-.dn-bg{fill:none;stroke:var(--line-2);stroke-width:12}
-.dn-fg{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round}
-.dn-num{font:600 30px var(--display);fill:var(--fg);letter-spacing:-.04em}
-.dn-sub{font:500 10.5px var(--mono);fill:var(--muted)}
-.hbars{display:grid;gap:13px}
-.hbar{display:grid;grid-template-columns:58px minmax(0,1fr) 22px;align-items:center;gap:4px 10px;font:500 12px/1 var(--mono);color:var(--muted)}
-.hbar b{color:var(--fg);font-weight:500}
-.hbar__track{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
-.hbar__fill{display:block;height:100%;width:100%;border-radius:4px;background:var(--accent);transform-origin:left;transform:scaleX(var(--v))}
-.hbar > span:last-of-type{text-align:right;color:var(--fg)}
-.hbar em{grid-column:2 / 4;font:400 12.5px/1.25 var(--display);color:var(--faint)}
+.wkpt{fill:var(--accent)}
+.lowpt{fill:var(--bad)}
+.annot line{stroke:var(--line-2);stroke-dasharray:3 4}
+.annot text{font:500 10px var(--mono);fill:var(--muted)}
+.heat{display:grid;grid-template-columns:minmax(70px,auto) repeat(6,minmax(0,1fr));gap:4px;align-items:center}
+.heat__c{padding-bottom:4px;font:500 10.5px/1 var(--mono);color:var(--faint);text-align:center;white-space:nowrap}
+.heat__r{padding-right:6px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.heat__x{height:36px;padding:0;border:1px solid var(--line);border-radius:7px;background:rgb(var(--accent-rgb) / var(--a,0));color:var(--muted);font:500 12px/1 var(--mono);cursor:pointer;transition:background-color .6s var(--ease),color .3s,border-color .25s}
+.heat__x.ink{color:var(--accent-ink)}
+.heat__x:hover{border-color:var(--fg)}
+.heat__x[aria-pressed="true"]{outline:2px solid var(--fg);outline-offset:1px}
+.heat__x.hint{animation:hint 1.6s ease-in-out infinite}
+@keyframes hint{50%{box-shadow:0 0 0 5px rgb(var(--accent-rgb)/.28)}}
+.heat__key{font:500 11.5px/1.4 var(--mono);color:var(--faint)}
+.res{overflow-x:auto}
+.res table{width:100%;border-collapse:collapse;font:500 12px/1.3 var(--mono)}
+.res th{padding:6px 8px;border-bottom:1px solid var(--line-2);color:var(--faint);font-weight:500;text-align:left;white-space:nowrap}
+.res td{padding:6px 8px;border-bottom:1px solid var(--line);color:var(--fg);white-space:nowrap}
+.res__n{margin-top:8px;font:500 11.5px/1.4 var(--mono);color:var(--faint)}
 .wf{list-style:none;margin:0;padding:0;display:grid;gap:11px;font-size:13.5px}
-.wf li{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.wf li{display:flex;align-items:center;gap:10px;color:var(--muted);transition:opacity .4s,color .4s}
+.wf li.todo{opacity:.5}
 .wf li.done{color:var(--fg)}
 .ck{position:relative;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;flex:none}
 .done .ck{background:var(--accent);border-color:var(--accent)}
@@ -397,9 +465,7 @@ em .ch:last-child{padding-right:.06em}
 .wf__total b{font:600 30px/1 var(--display);letter-spacing:-.04em;color:var(--fg);margin-right:6px}
 .sql{margin:0;font:500 12.5px/1.7 var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-word}
 .sql .ln{display:block}
-.sql .k{color:var(--accent)}.sql .s{color:var(--good)}.sql .n{color:var(--warn)}
-.dash__note{margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--faint)}
-.tagpill{padding:5px 9px;border-radius:6px;border:1px solid var(--line-2);color:var(--muted)}
+.sql .k{color:var(--accent)}.sql .s{color:var(--good)}.sql .n{color:var(--warn)}.sql .c{color:var(--faint)}
 
 /* Numbers */
 .nums__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:60px;border-top:1px solid var(--line-2)}
@@ -572,8 +638,8 @@ em .ch:last-child{padding-right:.06em}
   .hero__grid,.tune__grid{grid-template-columns:minmax(0,1fr)}
   .flow-wrap{justify-self:center}
   .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .bento{grid-template-columns:repeat(6,minmax(0,1fr))}
-  .panel,.panel--5,.panel--3{grid-column:span 3}
+  .case__trend,.case__heat,.case__sql,.case__wf{grid-column:1 / -1}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   .nums__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .num:nth-child(3){padding-left:0;border-left:0}
   .num:nth-child(n+3){border-top:1px solid var(--line)}
@@ -618,9 +684,21 @@ em .ch:last-child{padding-right:.06em}
   .out1{--x:17%;--y:88%}.out2{--x:50%;--y:88%}.out3{--x:83%;--y:88%}
   .node{width:31%;padding:9px 9px 10px}
   .node b{font-size:12px}.node small{font-size:10px}.node__k{display:none}
-  .mini-bars{display:none}
+  .mini-bars,.flow__cols{display:none}
+  .viz-term{padding:12px 14px;font-size:10px}
+  .flow__cap{margin-top:10px;font-size:13.5px}
   .cards{grid-template-columns:minmax(0,1fr)}
-  .panel,.panel--5,.panel--3{grid-column:span 6}
+  .case__steps{gap:6px}
+  .case__steps button{grid-template-columns:minmax(0,1fr);padding:10px 12px}
+  .case__steps b{grid-row:auto}
+  .case__steps small{display:none}
+  .case__say{font-size:14.5px}
+  .kpis{gap:10px}
+  .kpi{padding:14px}
+  .heat{grid-template-columns:72px repeat(6,minmax(0,1fr));gap:3px}
+  .heat__x{height:32px;font-size:11px}
+  .heat__r{font-size:11.5px}
+  .heat__c{font-size:9.5px}
   .nums__grid{grid-template-columns:minmax(0,1fr)}
   .num,.num + .num{padding-left:0;border-left:0}
   .num + .num{border-top:1px solid var(--line)}
@@ -660,6 +738,7 @@ em .ch:last-child{padding-right:.06em}
   .grades{padding:12px 14px 10px}
   .grades ol{gap:5px;margin-top:8px}
   .pred{margin-top:8px;padding-top:8px}
+  .tiles{margin-top:8px}.tiles button{height:28px}
   .cnn{padding-bottom:36px}
   .net__foot{margin-top:8px}
   .health__copy .steps{margin-top:12px}
@@ -734,17 +813,21 @@ html{scrollbar-color:color-mix(in srgb,var(--fg) 20%,transparent) var(--bg)}
         <p class="hero__stack mono">Laravel · SQL · Retool · Python · TensorFlow · Flutter</p>
       </div>
       <div class="flow-wrap">
-        <div class="flow" id="flow" role="img" aria-label="Diagram with sample data: claims tables, tissue slides and patient records flow into my systems in the middle, and out come a live dashboard, a ProstadeNet grade and a paid claim.">
+        <!-- Three lanes, each a source, a step and a result that link to the section where it is shown in full -->
+        <div class="flow" id="flow" role="group" aria-label="Three things I build, shown with sample data. Each one links to the part of this page where it runs in full.">
           <svg class="flow__svg" id="flowSvg" aria-hidden="true"></svg>
           <i class="hub-glow" aria-hidden="true"></i>
-          <div class="node in1" data-side="in"><span class="node__k">Source</span><b>claims.sql</b><small><span id="rowTick">1,204</span> rows</small></div>
-          <div class="node in2" data-side="in"><span class="node__k">Source</span><b>slides/</b><small>53,080 tiles</small></div>
-          <div class="node in3" data-side="in"><span class="node__k">Source</span><b>patients.csv</b><small>5,110 records</small></div>
-          <div class="hub" id="hub"><span class="node__k"><i class="dot"></i>Running<span class="hub__n" id="hubN">1/4</span></span><span class="hub__steps"><b class="is-on">Cleaning claims</b><b>Joining records</b><b>Training model</b><b>Updating charts</b></span><span class="hub__bar"><i></i></span></div>
-          <div class="node out1" data-side="out"><span class="node__k">Retool</span><b>Live dashboard</b><span class="mini-bars" id="miniBars"><i style="--v:.5"></i><i style="--v:.7"></i><i style="--v:.42"></i><i style="--v:.85"></i><i style="--v:.6"></i><i style="--v:.95"></i><i style="--v:.68"></i></span></div>
-          <div class="node out2" data-side="out"><span class="node__k">ProstadeNet</span><b>ISUP grade 3</b><small>confidence 0.97</small></div>
-          <div class="node out3" data-side="out"><span class="node__k">Revenue cycle</span><b>Claim 20418</b><small><em class="ok">Paid</em> · $99.20</small></div>
+          <p class="flow__cols" aria-hidden="true"><span>Data in</span><span>What I do</span><span>Result</span></p>
+          <a class="node in1" data-side="in" data-l="0" href="#dash"><span class="node__k">Source</span><b>claims.sql</b><small><span id="rowTick">1,204</span> rows</small><span class="sr">, becomes a live dashboard. Go to the dashboards.</span></a>
+          <a class="node in2" data-side="in" data-l="1" href="#net"><span class="node__k">Source</span><b>slides/</b><small>53,080 tiles</small><span class="sr">, becomes an ISUP grade. Go to the thesis.</span></a>
+          <a class="node in3" data-side="in" data-l="2" href="#claim"><span class="node__k">Source</span><b>visits.csv</b><small>312 visits</small><span class="sr">, become paid claims. Go to the claim cycle.</span></a>
+          <div class="hub" id="hub" aria-hidden="true"><span class="node__k"><i class="dot"></i>Running<span class="hub__n" id="hubN">1/3</span></span><span class="hub__steps"><b class="is-on">Joining claims</b><b>Training model</b><b>Coding a claim</b></span><span class="hub__bar"><i></i></span></div>
+          <a class="node out1" data-side="out" data-l="0" href="#dash"><span class="node__k">Retool</span><b>Live dashboard</b><span class="mini-bars" id="miniBars"><i style="--v:.5"></i><i style="--v:.7"></i><i style="--v:.42"></i><i style="--v:.85"></i><i style="--v:.6"></i><i style="--v:.95"></i><i style="--v:.68"></i></span><span class="sr">, Go to the dashboards.</span></a>
+          <a class="node out2" data-side="out" data-l="1" href="#net"><span class="node__k">ProstadeNet</span><b>ISUP grade 3</b><small>confidence 0.99</small><span class="sr">, Go to the thesis.</span></a>
+          <a class="node out3" data-side="out" data-l="2" href="#claim"><span class="node__k">Revenue cycle</span><b>Claim 20418</b><small><em class="ok">Paid</em> · $99.20</small><span class="sr">, Go to the claim cycle.</span></a>
         </div>
+        <p class="flow__cap" id="flowCap"><b>claims.sql → Live dashboard.</b> <span>SQL joins and cleans the claim rows, then Retool turns them into the dashboard an operations team checks every morning.</span> <a href="#dash">See the dashboard</a></p>
+        <div class="flow__tip" id="flowTip" aria-hidden="true"><b></b><span></span><small></small></div>
       </div>
     </div>
   </section>
@@ -756,8 +839,40 @@ html{scrollbar-color:color-mix(in srgb,var(--fg) 20%,transparent) var(--bg)}
         <h2 class="h2" id="work-title" data-split>Most of the work is the part <em>nobody sees.</em></h2>
         <p class="sec-sub" data-up>Schemas, routes, queries, cleaning and checks. The dashboards and models only look easy when that part is right.</p>
       </header>
-      <div class="cards">
-        <article class="card"><div class="card__in">
+      <div class="filters" id="workFilters" role="group" aria-label="Show projects by kind of work">
+        <button type="button" aria-pressed="true" data-f="all">All <span>7</span></button>
+        <button type="button" aria-pressed="false" data-f="data">Data &amp; SQL <span>3</span></button>
+        <button type="button" aria-pressed="false" data-f="ml">Machine learning <span>2</span></button>
+        <button type="button" aria-pressed="false" data-f="web">Web &amp; mobile <span>3</span></button>
+        <button type="button" aria-pressed="false" data-f="auto">Automation <span>1</span></button>
+      </div>
+      <div class="cards" id="cards">
+        <article class="card" data-cat="data"><div class="card__in">
+          <div class="card__viz viz-sql" aria-hidden="true">
+            <code><b>SELECT</b> status, COUNT(*) <b>FROM</b> tasks <b>GROUP BY</b> status</code>
+            <div class="bars" data-bars><i style="--v:.42"></i><i style="--v:.6"></i><i style="--v:.48"></i><i style="--v:.78"></i><i style="--v:.55"></i><i style="--v:.9"></i><i style="--v:.66"></i><i style="--v:.5"></i></div>
+          </div>
+          <div class="card__body">
+            <p class="card__tag">Data · 2026</p>
+            <p class="card__stat">SQL <span class="ar">→</span> Retool</p>
+            <p class="card__label">live dashboards and automated workflows</p>
+            <h3 class="card__title">Operations dashboards <span>Retool · SQL</span></h3>
+            <p class="card__desc">Dashboards and automated workflows in Retool, on top of SQL. The case study further down follows one Monday when denials suddenly jumped.</p>
+            <p class="card__links"><a href="#dash"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>See the case study<span class="sr">: operations dashboards</span></a></p>
+          </div>
+        </div></article>
+        <article class="card" data-cat="ml"><div class="card__in">
+          <div class="card__viz viz-tissue" aria-hidden="true"><canvas data-tissue></canvas><i class="scan"></i><span class="chip" style="left:12px;top:12px">224 × 224</span><span class="chip chip--acc" style="right:12px;bottom:12px">ISUP grade 3</span></div>
+          <div class="card__body">
+            <p class="card__tag">Machine learning · 2025</p>
+            <p class="card__stat" data-count="99.83" data-suf="%">99.83%</p>
+            <p class="card__label">test accuracy across six ISUP grades</p>
+            <h3 class="card__title">ProstadeNet <span>TensorFlow</span></h3>
+            <p class="card__desc">My thesis: a CNN that grades prostate cancer tissue. Trained on 53,080 images, tuned in ten recorded steps, and better than the five pretrained models it was tested against.</p>
+            <p class="card__links"><a href="#net"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: ProstadeNet</span></a></p>
+          </div>
+        </div></article>
+        <article class="card" data-cat="web data"><div class="card__in">
           <div class="card__viz" aria-hidden="true"><ol class="routes" data-routes>
             <li class="is-on"><b class="m-get">GET</b><span>/classes</span><i>200</i></li>
             <li><b class="m-post">POST</b><span>/student</span><i>201</i></li>
@@ -770,33 +885,38 @@ html{scrollbar-color:color-mix(in srgb,var(--fg) 20%,transparent) var(--bg)}
             <p class="card__stat" data-count="5">5</p>
             <p class="card__label">record modules, each behind role-based permissions</p>
             <h3 class="card__title">School management system <span>Laravel</span></h3>
+            <p class="card__desc">A Laravel app for a school's daily records: classes, students, attendance and grades. Every page checks the user's role before it shows anything.</p>
             <p class="card__links"><a href="#stack"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: school management system</span></a><a href="https://github.com/kaif15-14682/School_Management_system_Laravel" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for the school management system on GitHub, opens in a new tab</span></a></p>
           </div>
         </div></article>
-        <article class="card"><div class="card__in">
-          <div class="card__viz viz-sql" aria-hidden="true">
-            <code><b>SELECT</b> status, COUNT(*) <b>FROM</b> tasks <b>GROUP BY</b> status</code>
-            <div class="bars" data-bars><i style="--v:.42"></i><i style="--v:.6"></i><i style="--v:.48"></i><i style="--v:.78"></i><i style="--v:.55"></i><i style="--v:.9"></i><i style="--v:.66"></i><i style="--v:.5"></i></div>
-          </div>
+        <article class="card" data-cat="auto data" id="p-rampart"><div class="card__in">
+          <pre class="card__viz viz-term" aria-hidden="true"><b>$ rampart run</b>
+claims_1127.csv         <span class="g">loaded</span>   1,204 rows
+claims_1127_resend.csv  skipped  already loaded
+remits_1127.csv         <span class="y">held</span>     row 88: bad date
+visits_1127.csv         <span class="g">loaded</span>   312 rows
+<b>4 files: 2 loaded, 1 skipped, 1 held</b><i class="caret"></i></pre>
           <div class="card__body">
-            <p class="card__tag">Data · 2026</p>
-            <p class="card__stat">SQL <span class="ar">→</span> Retool</p>
-            <p class="card__label">live dashboards and automated workflows</p>
-            <h3 class="card__title">Operations dashboards <span>Retool · SQL</span></h3>
-            <p class="card__links"><a href="#dash"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: operations dashboards</span></a></p>
+            <p class="card__tag">Automation · 2026</p>
+            <p class="card__stat" data-count="24">24</p>
+            <p class="card__label">automated tests, run in CI on every push</p>
+            <h3 class="card__title">Rampart <span>Bash · SQLite</span></h3>
+            <p class="card__desc">A Bash tool that guards a data inbox. Each new file is checked against its schema, loaded into SQLite exactly once, or held back with the reason, and the day ends with a report.</p>
+            <p class="card__links"><a href="https://github.com/kaif15-14682/rampart" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for Rampart on GitHub, opens in a new tab</span></a></p>
           </div>
         </div></article>
-        <article class="card"><div class="card__in">
-          <div class="card__viz viz-tissue" aria-hidden="true"><canvas data-tissue></canvas><i class="scan"></i><span class="chip" style="left:12px;top:12px">224 × 224</span><span class="chip chip--acc" style="right:12px;bottom:12px">ISUP grade 3</span></div>
+        <article class="card" data-cat="ml"><div class="card__in">
+          <div class="card__viz viz-dots" aria-hidden="true"><div class="dots" id="dots"></div><p><b>74 of 1,278</b> test patients had a stroke</p></div>
           <div class="card__body">
-            <p class="card__tag">Machine learning · 2025</p>
-            <p class="card__stat" data-count="99.83" data-suf="%">99.83%</p>
-            <p class="card__label">test accuracy across six ISUP grades</p>
-            <h3 class="card__title">ProstadeNet <span>TensorFlow</span></h3>
-            <p class="card__links"><a href="#net"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: ProstadeNet</span></a></p>
+            <p class="card__tag">Machine learning · 2023</p>
+            <p class="card__stat" data-count="5110">5,110</p>
+            <p class="card__label">patient records, five classifiers compared</p>
+            <h3 class="card__title">Stroke risk prediction <span>scikit-learn</span></h3>
+            <p class="card__desc">Five classifiers compared on 5,110 patient records, and a plain look at why a model that is 94% accurate can still miss every stroke.</p>
+            <p class="card__links"><a href="#stroke"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: stroke risk prediction</span></a><a href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for the stroke risk model on GitHub, opens in a new tab</span></a></p>
           </div>
         </div></article>
-        <article class="card"><div class="card__in">
+        <article class="card" data-cat="web"><div class="card__in">
           <div class="card__viz viz-phones" aria-hidden="true">
             <div class="ph"><span class="ph__k">Dhaka</span><b class="ph__big">31°</b><span class="ph__k">Hazy sun</span><span class="ph__row"><i></i><i></i><i></i></span></div>
             <div class="ph"><span class="ph__k">Q 3 of 10</span><span class="ph__timer"><i></i></span><span class="ph__opt"></span><span class="ph__opt is-ok"></span><span class="ph__opt"></span><span class="ph__opt"></span></div>
@@ -807,35 +927,11 @@ html{scrollbar-color:color-mix(in srgb,var(--fg) 20%,transparent) var(--bg)}
             <p class="card__stat">3 apps</p>
             <p class="card__label">weather, quiz and an all-in-one app</p>
             <h3 class="card__title">Flutter apps <span>Dart</span></h3>
+            <p class="card__desc">Live weather from a public API, a timed quiz, and one app that brings the tools together, all written in Flutter.</p>
             <p class="card__links"><a href="https://github.com/kaif15-14682/Combined_App_Flutter" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for the Flutter apps on GitHub, opens in a new tab</span></a></p>
           </div>
         </div></article>
-        <article class="card"><div class="card__in">
-          <div class="card__viz viz-dots" aria-hidden="true"><div class="dots" id="dots"></div><p><b>74 of 1,278</b> test patients had a stroke</p></div>
-          <div class="card__body">
-            <p class="card__tag">Machine learning · 2023</p>
-            <p class="card__stat" data-count="5110">5,110</p>
-            <p class="card__label">patient records, five classifiers compared</p>
-            <h3 class="card__title">Stroke risk prediction <span>scikit-learn</span></h3>
-            <p class="card__links"><a href="#stroke"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>How it works<span class="sr">: stroke risk prediction</span></a><a href="https://github.com/kaif15-14682/Machine-Learning-project-for-AI" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for the stroke risk model on GitHub, opens in a new tab</span></a></p>
-          </div>
-        </div></article>
-        <article class="card"><div class="card__in">
-          <pre class="card__viz viz-term" aria-hidden="true"><b>$ ./pass_manager_by_kaif.sh</b>
-Enter the code to access the password Manager: ******
-<span class="g">Verification successful. Access granted.</span>
-1 Add   2 Retrieve   3 List   4 Update
-5 Delete   6 Search   7 Exit
-<b>› 2</b><i class="caret"></i></pre>
-          <div class="card__body">
-            <p class="card__tag">Tools · 2023</p>
-            <p class="card__stat">AES-256</p>
-            <p class="card__label">encryption on every stored password</p>
-            <h3 class="card__title">Password manager <span>Bash · OpenSSL</span></h3>
-            <p class="card__links"><a href="https://github.com/kaif15-14682/Password-manager-using-bash" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M5 11 11 5M6 5h5v5"/></svg>Code<span class="sr"> for the password manager on GitHub, opens in a new tab</span></a></p>
-          </div>
-        </div></article>
-        <article class="card card--wide"><div class="card__in">
+        <article class="card card--wide" data-cat="web"><div class="card__in">
           <div class="card__viz viz-plan" aria-hidden="true">
             <p class="plan__head">Tuesday · 8 am to midnight</p>
             <div class="plan__row"><span>Yui</span><i class="plan__track"><b style="--a:.0625;--b:.5625"></b></i></div>
@@ -887,12 +983,12 @@ Enter the code to access the password Manager: ******
                 <li>Streamlined data visualisation and process tracking for reporting and task management.</li>
               </ul>
               <ul class="tl__tags"><li>Retool</li><li>SQL</li><li>Automated workflows</li></ul>
-              <a class="tl__more" href="#dash"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>See the kind of dashboard I build</a>
+              <a class="tl__more" href="#dash"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 3v10m-4-4 4 4 4-4"/></svg>Step through a dashboard case study</a>
             </li>
             <li class="tl__item" data-year="2025" data-label="Thesis research">
               <p class="tl__when">2024 – 2025</p>
-              <h3 class="tl__role">Undergraduate Researcher</h3>
-              <p class="tl__org">Daffodil International University</p>
+              <h3 class="tl__role">Machine Learning Researcher</h3>
+              <p class="tl__org">Daffodil International University · BSc thesis</p>
               <ul class="tl__pts">
                 <li>Built ProstadeNet, a CNN that grades prostate cancer tissue into six ISUP grades: <b data-count="99.83" data-suf="%">99.83%</b> test accuracy and a <b data-count="99.69" data-suf="%">99.69%</b> F1-score.</li>
                 <li>Grew the dataset from <b data-count="10616">10,616</b> to <b data-count="53080">53,080</b> images, tuned it with an ablation study and 5-fold cross-validation, and outperformed all five pretrained models it was benchmarked against.</li>
@@ -905,19 +1001,20 @@ Enter the code to access the password Manager: ******
               <h3 class="tl__role">Sales Development Representative</h3>
               <p class="tl__org">Santuary Limited</p>
               <ul class="tl__pts">
-                <li>Made high-volume outbound calls and handled client conversations professionally.</li>
-                <li>Met outreach targets consistently in a fast-paced, feedback-driven team.</li>
+                <li>Spoke with a high volume of new prospects by phone, quickly spotting who had a genuine need and turning a first “no” into a conversation worth having.</li>
+                <li>Passed qualified leads to the sales team with notes on what each client wanted, so their follow-up started where my call ended. Met my outreach targets consistently in a fast-paced team that ran on feedback.</li>
               </ul>
-              <ul class="tl__tags"><li>Outbound calls</li><li>Client conversations</li></ul>
+              <ul class="tl__tags"><li>Outbound prospecting</li><li>Lead qualification</li><li>Objection handling</li></ul>
             </li>
-            <li class="tl__item" data-year="2019" data-label="Started tutoring">
+            <li class="tl__item" data-year="2019" data-label="Academic consulting">
               <p class="tl__when">2019 – 2025</p>
-              <h3 class="tl__role">Private Tutor</h3>
+              <h3 class="tl__role">Academic Consultant</h3>
               <p class="tl__org">Caretutors</p>
               <ul class="tl__pts">
-                <li>Taught students one to one for six years, explaining complex technical ideas clearly.</li>
+                <li>Worked with students and their families on study plans, subject choices and exam strategy, then taught the plan one to one.</li>
+                <li>Six years of making hard technical ideas simple, which is most of the job when I explain data to people who don't work with it.</li>
               </ul>
-              <ul class="tl__tags"><li>One-to-one teaching</li></ul>
+              <ul class="tl__tags"><li>Study planning</li><li>Exam strategy</li><li>One-to-one teaching</li></ul>
             </li>
           </ol>
         </div>
@@ -963,7 +1060,7 @@ Enter the code to access the password Manager: ******
           <caption class="sr">Skills by project</caption>
           <thead><tr><th scope="col">Skill</th><th scope="col">Projects</th></tr></thead>
           <tbody>
-            <tr><th scope="row">SQL &amp; MySQL</th><td>School system, Dashboards</td></tr>
+            <tr><th scope="row">SQL &amp; MySQL</th><td>School system, Dashboards, Rampart</td></tr>
             <tr><th scope="row">PHP &amp; Laravel</th><td>School system</td></tr>
             <tr><th scope="row">Retool</th><td>Dashboards</td></tr>
             <tr><th scope="row">HTML, CSS &amp; Tailwind</th><td>School system</td></tr>
@@ -973,8 +1070,8 @@ Enter the code to access the password Manager: ******
             <tr><th scope="row">scikit-learn &amp; pandas</th><td>Stroke ML</td></tr>
             <tr><th scope="row">Flutter &amp; Dart</th><td>Flutter apps</td></tr>
             <tr><th scope="row">REST APIs</th><td>Flutter apps</td></tr>
-            <tr><th scope="row">Bash &amp; Linux</th><td>Password CLI</td></tr>
-            <tr><th scope="row">Git &amp; GitHub</th><td>School system, Flutter apps, Stroke ML, Password CLI</td></tr>
+            <tr><th scope="row">Bash &amp; Linux</th><td>Rampart</td></tr>
+            <tr><th scope="row">Git &amp; GitHub</th><td>School system, Flutter apps, Stroke ML, Rampart</td></tr>
             <tr><th scope="row">CPT &amp; ICD-10-CM coding</th><td>DocPro Health (RCM)</td></tr>
             <tr><th scope="row">Claims, AR &amp; denials</th><td>DocPro Health (RCM)</td></tr>
           </tbody>
@@ -996,16 +1093,20 @@ Enter the code to access the password Manager: ******
         <div class="net__stage">
           <div class="cnn" id="cnn" role="img" aria-label="Simplified diagram of ProstadeNet: an input tile, three convolution and max-pooling blocks with 32, 64 and 128 filters, a dense layer, and a softmax over six ISUP grades."></div>
           <div class="grades" id="grades">
-            <p class="grades__h"><span>Softmax</span><span>six ISUP grades</span></p>
+            <p class="grades__h"><span>Example scores</span><span>six ISUP grades</span></p>
             <ol>
-              <li><span>Grade 0</span><i><b style="--p:.003"></b></i><em>0%</em></li>
-              <li><span>Grade 1</span><i><b style="--p:.007"></b></i><em>1%</em></li>
-              <li><span>Grade 2</span><i><b style="--p:.013"></b></i><em>1%</em></li>
-              <li class="top"><span>Grade 3</span><i><b style="--p:.97"></b></i><em>97%</em></li>
-              <li><span>Grade 4</span><i><b style="--p:.005"></b></i><em>1%</em></li>
-              <li><span>Grade 5</span><i><b style="--p:.002"></b></i><em>0%</em></li>
+              <li><span>Grade 0</span><i><b style="--p:.001"></b></i><em>0.1%</em></li>
+              <li><span>Grade 1</span><i><b style="--p:.002"></b></i><em>0.2%</em></li>
+              <li><span>Grade 2</span><i><b style="--p:.004"></b></i><em>0.4%</em></li>
+              <li class="top"><span>Grade 3</span><i><b style="--p:.991"></b></i><em>99.1%</em></li>
+              <li><span>Grade 4</span><i><b style="--p:.0015"></b></i><em>0.1%</em></li>
+              <li><span>Grade 5</span><i><b style="--p:.0005"></b></i><em>0.1%</em></li>
             </ol>
-            <p class="pred" id="pred">Predicted: <b>grade 3</b> · 97%<small>Illustrative scores, not real model output</small></p>
+            <p class="pred" id="pred">Predicted: <b>grade 3</b> · 99.1%<small>Gleason 4+3: most glands fused or poorly formed</small></p>
+            <div class="tiles" id="tiles" role="group" aria-label="Try a sample tile of another grade">
+              <span>Try another tile</span>
+              <button type="button" data-g="0" aria-pressed="false" aria-label="Grade 0 tile">0</button><button type="button" data-g="1" aria-pressed="false" aria-label="Grade 1 tile">1</button><button type="button" data-g="2" aria-pressed="false" aria-label="Grade 2 tile">2</button><button type="button" data-g="3" aria-pressed="true" aria-label="Grade 3 tile">3</button><button type="button" data-g="4" aria-pressed="false" aria-label="Grade 4 tile">4</button><button type="button" data-g="5" aria-pressed="false" aria-label="Grade 5 tile">5</button>
+            </div>
           </div>
         </div>
         <div class="net__foot">
@@ -1047,35 +1148,38 @@ Enter the code to access the password Manager: ******
   <section class="sec" id="dash" data-glow="dash" aria-labelledby="dash-title">
     <div class="wrap">
       <header class="sec-head">
-        <p class="eyebrow" data-up>Retool &amp; SQL</p>
+        <p class="eyebrow" data-up>Retool &amp; SQL · Case study</p>
         <h2 class="h2" id="dash-title" data-split>A Monday, seen from <em>my dashboards.</em></h2>
-        <p class="sec-sub" data-up>The kind of view I build for an operations team: what came in, what got stuck, and what ran on its own.</p>
+        <p class="sec-sub" data-up>A case study built on a simulated claims set, so no real patient or payer data is shown. In two weeks, first-pass acceptance fell by eight points. Step through how the dashboard and two queries found the cause, and what the fix changed.</p>
       </header>
-      <div class="bento">
-        <article class="panel panel--5" data-panel="bars"><div class="panel__head"><h3>Claims worked by hour</h3><span>today</span></div><div data-chart="bars"></div></article>
-        <article class="panel panel--3" data-panel="donut"><div class="panel__head"><h3>Accepted first time</h3><span>this week</span></div><div class="donut" data-chart="donut"></div></article>
-        <article class="panel" data-panel="sql"><div class="panel__head"><h3>The query behind it</h3><span>SQL</span></div>
-<pre class="sql" id="sql"><span class="ln"><span class="k">SELECT</span> payer, <span class="k">COUNT</span>(*) <span class="k">AS</span> denied</span><span class="ln"><span class="k">FROM</span> claims</span><span class="ln"><span class="k">WHERE</span> status = <span class="s">'denied'</span></span><span class="ln">  <span class="k">AND</span> denied_on &gt;= <span class="k">CURRENT_DATE</span> - <span class="n">30</span></span><span class="ln"><span class="k">GROUP BY</span> payer</span><span class="ln"><span class="k">ORDER BY</span> denied <span class="k">DESC</span>;</span></pre></article>
-        <article class="panel panel--5" data-panel="line"><div class="panel__head"><h3>Open accounts receivable</h3><span>last 30 days</span></div><div data-chart="line"></div></article>
-        <article class="panel" data-panel="hbars"><div class="panel__head"><h3>Denials by reason</h3><span>this month</span></div>
-          <div class="hbars">
-            <div class="hbar"><b>CO-16</b><span class="hbar__track"><span class="hbar__fill" style="--v:.9"></span></span><span>9</span><em>Missing or incomplete information</em></div>
-            <div class="hbar"><b>CO-11</b><span class="hbar__track"><span class="hbar__fill" style="--v:.6"></span></span><span>6</span><em>Diagnosis doesn't support the procedure</em></div>
-            <div class="hbar"><b>CO-97</b><span class="hbar__track"><span class="hbar__fill" style="--v:.4"></span></span><span>4</span><em>Bundled into another service</em></div>
-            <div class="hbar"><b>CO-197</b><span class="hbar__track"><span class="hbar__fill" style="--v:.3"></span></span><span>3</span><em>No prior authorization</em></div>
+      <div class="case" id="case">
+        <div class="case__steps" role="group" aria-label="The case, step by step">
+          <button type="button" data-s="0" aria-pressed="true"><b>01</b><span>Spot it</span><small>The number that moved</small></button>
+          <button type="button" data-s="1" aria-pressed="false"><b>02</b><span>Find it</span><small>One payer, one reason</small></button>
+          <button type="button" data-s="2" aria-pressed="false"><b>03</b><span>Fix it</span><small>Six weeks later</small></button>
+        </div>
+        <p class="case__say" id="caseSay" aria-live="polite"><b>Monday, 9 am.</b> Over the last two weeks only 87.6% of claims were accepted on the first try, down from 95.6% the two weeks before.</p>
+        <div class="case__board">
+          <div class="kpis">
+            <article class="panel kpi" data-k="fp"><span>First pass, 2 weeks</span><b>87.6%</b><em class="down">▼ 8.0 pts</em></article>
+            <article class="panel kpi" data-k="den"><span>Denials, 2 weeks</span><b>158</b><em class="down">2.9× before</em></article>
+            <article class="panel kpi" data-k="amt"><span>Billed amount denied</span><b>$148.5k</b><em class="down">was $19.8k</em></article>
+            <article class="panel kpi" data-k="top"><span>Top denial reason</span><b>CO-197</b><em>68% of denials</em></article>
           </div>
-        </article>
-        <article class="panel panel--3" data-panel="wf"><div class="panel__head"><h3>Workflows</h3><span>automated</span></div>
-          <ul class="wf">
-            <li class="done"><i class="ck"></i>Sync new records</li>
-            <li class="done"><i class="ck"></i>Flag late reports</li>
-            <li class="done"><i class="ck"></i>Notify team lead</li>
-            <li class="run"><i class="ck"></i>Close finished tasks</li>
-          </ul>
-          <p class="wf__total"><b data-count="11">11</b>completed today</p>
-        </article>
+          <article class="panel case__trend"><div class="panel__head"><h3>First pass by week</h3><span>% accepted first try</span></div><div id="caseTrend"></div></article>
+          <article class="panel case__heat"><div class="panel__head"><h3>Denials by payer and reason</h3><span id="heatWhen">weeks 5 – 6</span></div><div class="heat" id="heat" role="group" aria-label="Denials by payer and reason. Pick a cell to see its claims."></div><p class="heat__key" id="heatKey">Darker means more denials. Pick a cell to see its claims.</p></article>
+          <article class="panel case__sql"><div class="panel__head"><h3 id="sqlTitle">The query behind it</h3><span>SQL</span></div><pre class="sql" id="sql"></pre><div class="res" id="res"></div></article>
+          <article class="panel case__wf"><div class="panel__head"><h3>The fix, automated</h3><span id="wfState">not built yet</span></div>
+            <ul class="wf" id="wf">
+              <li><i class="ck"></i>At 7:00 every morning, pull Anthem's MRI claims</li>
+              <li><i class="ck"></i>Look up each claim's prior auth number</li>
+              <li><i class="ck"></i>Hold any claim that has none</li>
+              <li><i class="ck"></i>Send the front desk the list to chase</li>
+            </ul>
+            <p class="wf__total"><b id="wfN">0</b><span id="wfL">claims held so far</span></p>
+          </article>
+        </div>
       </div>
-      <p class="dash__note mono"><span class="tagpill">Sample data</span>The layout and query reflect my Retool work. The numbers are illustrative.</p>
     </div>
   </section>
 
@@ -1255,9 +1359,11 @@ Enter the code to access the password Manager: ******
   <div class="wrap foot__in mono"><span>© 2026 Sheikh Kaif · Dhaka, Bangladesh</span><span class="foot__perf" id="perf"></span></div>
 </footer>
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed" crossorigin="anonymous"></script>
+<!-- GSAP 3.12.5, ScrollTrigger and Lenis 1.1.13 (MIT, assets/js/LICENSE-Lenis.txt), byte for byte the CDN files
+     the page used before (same SHA-384) -->
+<script defer src="assets/js/gsap.min.js"></script>
+<script defer src="assets/js/ScrollTrigger.min.js"></script>
+<script defer src="assets/js/lenis.min.js"></script>
 <script type="module">
 window.__introRun = true;
 
@@ -1274,7 +1380,10 @@ const smooth = (t) => { t = clamp(t); return t * t * (3 - 2 * t); };
 const lerp = (a, b, t) => a + (b - a) * t;
 const safe = (name, fn) => { try { return fn(); } catch (e) { console.error(`[${name}]`, e); return null; } };
 const docPos = (el) => { let x = 0, y = 0, n = el; while (n) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } return { x, y }; };
-if (G && ST) { G.registerPlugin(ST); ST.config({ ignoreMobileResize: true }); }
+// Every scroll scene is measured once, by the refresh at the end of the scroll setup below (and again if the fonts land
+// after it, or the window is resized). ScrollTrigger would also measure everything on DOMContentLoaded and on load, but
+// nothing on this page changes size by then, and each full measure is the biggest single cost of starting the page.
+if (G && ST) { G.registerPlugin(ST); ST.config({ ignoreMobileResize: true, autoRefreshEvents: "visibilitychange,resize" }); }
 
 // From the thesis, Table 4.2. Each step keeps the best setting found so far.
 const STEPS = [
@@ -1444,6 +1553,11 @@ const Glow = safe("glow", () => {
   const noGL = () => { root.classList.add("no-gl"); canvas.remove(); return null; };
   const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, powerPreference: "high-performance" });
   if (!gl) return noGL();
+  // Without a GPU the browser draws WebGL on the CPU (SwiftShader, llvmpipe, Windows' basic renderer). The glow redraws
+  // every frame, and there one frame can block the page for most of a second, so those browsers get the CSS glow instead
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = `${gl.getParameter(gl.RENDERER)} ${info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : ""}`;
+  if (/swiftshader|llvmpipe|softpipe|basic render/i.test(renderer)) return noGL();
   // Phones can drop the graphics context (after a long time in the background, say); fall back to the CSS glow then
   canvas.addEventListener("webglcontextlost", () => { loops.delete(tick); noGL(); });
   const small = Math.min(innerWidth, innerHeight) < 700;
@@ -1980,10 +2094,12 @@ const Flow = safe("flow", () => {
         const x1 = inSide ? nx : hx, y1 = inSide ? ny + nh : hy + hry, x2 = inSide ? hx : nx, y2 = inSide ? hy - hry : ny - nh, m = (y1 + y2) / 2;
         d = `M${x1} ${y1}C${x1} ${m} ${x2} ${m} ${x2} ${y2}`;
       }
-      const base = svgEl("path", { d, class: "wire", pathLength: 1 }, svg);
-      svgEl("path", { d, class: "wire-flow", id: `fw${i}` }, svg);
+      // Each card's wire, its moving dashes and its packets share a group, so a lane can be lit or dimmed as one
+      const g = svgEl("g", { class: "lane", "data-l": n.dataset.l }, svg);
+      const base = svgEl("path", { d, class: "wire", pathLength: 1 }, g);
+      svgEl("path", { d, class: "wire-flow", id: `fw${i}` }, g);
       [["pkt-glow", 7], ["pkt", 2.6]].forEach(([cls, rad]) => {
-        const c = svgEl("circle", { r: rad, class: cls }, svg);
+        const c = svgEl("circle", { r: rad, class: cls }, g);
         const am = svgEl("animateMotion", { dur: `${2.2 + i * 0.25}s`, repeatCount: "indefinite", begin: `${(-i * 0.37).toFixed(2)}s` }, c);
         svgEl("mpath", { href: `#fw${i}` }, am);
       });
@@ -1998,28 +2114,85 @@ const Flow = safe("flow", () => {
 
   const rows = $("#rowTick"), bars = $$("#miniBars i");
   let n = 1204, timer = 0;
-  // The middle card steps through the run every 2 s, and its bar fills a quarter per step
+  // One lane at a time: the middle card shows its step, its two cards and wires light up, and the caption under the
+  // diagram says what happens there. The lanes take turns every few seconds; pointing at or focusing a card holds its lane.
+  const LANES = [
+    { t: "claims.sql → Live dashboard.", d: "SQL joins and cleans the claim rows, then Retool turns them into the dashboard an operations team checks every morning.", a: "See the dashboard", h: "#dash" },
+    { t: "slides/ → ISUP grade.", d: "53,080 tissue tiles trained ProstadeNet, my thesis CNN. It grades a tile from 0 to 5, at 99.83% test accuracy.", a: "Watch it grade a tile", h: "#net" },
+    { t: "visits.csv → Paid claim.", d: "A patient visit becomes a coded claim. If the payer denies it, I find the error, fix it and send it again until it's paid.", a: "Follow one claim", h: "#claim" },
+  ];
+  const PERIOD = 3600;
   const steps = $$(".hub__steps b", hub), stepN = $("#hubN"), fill = $(".hub__bar i", hub);
-  let si = 0, stepTimer = 0;
-  const run = (i) => {
-    steps[si].classList.replace("is-on", "is-out");
-    steps[i].classList.remove("is-out");
-    steps[i].classList.add("is-on");
+  const cap = $("#flowCap"), capT = $("b", cap), capD = $("span", cap), capA = $("a", cap);
+  let si = 0, stepTimer = 0, visible = false, held = false, resume = 0;
+  const run = (i, timed) => {
+    if (i !== si) {
+      steps[si].classList.replace("is-on", "is-out");
+      steps[i].classList.remove("is-out");
+      steps[i].classList.add("is-on");
+    }
     si = i;
+    box.dataset.on = i;
     stepN.textContent = `${i + 1}/${steps.length}`;
-    fill.animate([{ transform: `scaleX(${i / steps.length})` }, { transform: `scaleX(${(i + 1) / steps.length})` }], { duration: 2000, fill: "forwards" });
+    // The bar fills a third per lane while the lanes take turns, and sits full on a lane that is being held
+    const to = `scaleX(${(i + 1) / steps.length})`;
+    fill.animate(timed ? [{ transform: `scaleX(${i / steps.length})` }, { transform: to }] : [{ transform: to }], { duration: timed ? PERIOD : 1, fill: "forwards" });
+    const L = LANES[i];
+    if (capT.textContent !== L.t) {
+      capT.textContent = L.t; capD.textContent = L.d; capA.textContent = L.a; capA.setAttribute("href", L.h);
+      // A slide, not a fade, so the text never passes through a low-contrast moment
+      if (MOTION) cap.animate([{ transform: "translateY(5px)" }, { transform: "none" }], { duration: 380, easing: "ease-out" });
+    }
   };
   const live = () => {
     n += 1 + ((Math.random() * 3) | 0);
     rows.textContent = n.toLocaleString("en-US");
     bars.forEach((b) => b.style.setProperty("--v", (0.3 + Math.random() * 0.7).toFixed(2)));
   };
+  const cycle = () => {
+    clearInterval(stepTimer); stepTimer = 0;
+    if (!MOTION || !visible || held) return;
+    run(si, true);
+    stepTimer = setInterval(() => run((si + 1) % steps.length, true), PERIOD);
+  };
+  // Pointing at a card (or focusing it) opens a small card beside it that says what the lane does; clicking goes there.
+  // Left-column cards open it to the right of their left edge, right-column cards to the left of their right edge,
+  // and the bottom row opens it upward, so it always stays inside the diagram's column.
+  const tip = $("#flowTip"), wrap = box.parentElement, tipT = $("b", tip), tipD = $("span", tip), tipA = $("small", tip);
+  const showTip = (el) => {
+    const L = LANES[+el.dataset.l], w = wrap.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const fromLeft = el.dataset.side === "in", up = el.classList.contains("in3") || el.classList.contains("out3");
+    tipT.textContent = L.t; tipD.textContent = L.d; tipA.textContent = `Click to ${L.a.toLowerCase()} ↓`;
+    tip.style.left = fromLeft ? `${(r.left - w.left).toFixed(0)}px` : "auto";
+    tip.style.right = fromLeft ? "auto" : `${(w.right - r.right).toFixed(0)}px`;
+    tip.style.top = up ? "auto" : `${(r.bottom - w.top + 10).toFixed(0)}px`;
+    tip.style.bottom = up ? `${(w.bottom - r.top + 10).toFixed(0)}px` : "auto";
+    tip.classList.add("is-on");
+  };
+  const hideTip = () => tip.classList.remove("is-on");
+  nodes.forEach((el) => {
+    const hold = () => { held = true; clearTimeout(resume); clearInterval(stepTimer); stepTimer = 0; run(+el.dataset.l, false); showTip(el); };
+    const let_go = () => {
+      held = false;
+      hideTip();
+      clearTimeout(resume);
+      if (!MOTION) { delete box.dataset.on; return; }
+      resume = setTimeout(cycle, 2200);
+    };
+    el.addEventListener("pointerenter", hold);
+    el.addEventListener("focus", hold);
+    el.addEventListener("pointerleave", let_go);
+    el.addEventListener("blur", let_go);
+    el.addEventListener("click", hideTip);
+  });
   new IntersectionObserver(([e]) => {
-    box.classList.toggle("is-off", !e.isIntersecting);
-    if (e.isIntersecting && MOTION) {
-      if (!timer) { timer = setInterval(live, 1700); run(si); stepTimer = setInterval(() => run((si + 1) % steps.length), 2000); }
+    visible = e.isIntersecting;
+    box.classList.toggle("is-off", !visible);
+    if (visible && MOTION) {
+      if (!timer) timer = setInterval(live, 1700);
+      if (!stepTimer) cycle();
       if (svg.unpauseAnimations) svg.unpauseAnimations();
-    } else { clearInterval(timer); clearInterval(stepTimer); timer = 0; if (svg.pauseAnimations) svg.pauseAnimations(); }
+    } else { clearInterval(timer); clearInterval(stepTimer); timer = 0; stepTimer = 0; if (svg.pauseAnimations) svg.pauseAnimations(); }
   }).observe(box);
 
   if (FINE && MOTION) {
@@ -2040,7 +2213,7 @@ const Flow = safe("flow", () => {
 
 /* ---------- Intro: a line of light runs in from the left, lights the hub as it passes, and runs out the other side ---------- */
 const h1Chars = split($("#hero-title"));
-const heroBits = () => [$("#nav"), $(".hero .pill"), ...$$(".hero .lede, .hero .cta, .hero .hero__stack")];
+const heroBits = () => [$("#nav"), $(".hero .pill"), ...$$(".hero .lede, .hero .cta, .hero .hero__stack"), $(".flow__cols"), $("#flowCap")];
 const sideOf = (s) => Flow.nodes.filter((n) => n.dataset.side === s);
 const heroHide = () => {
   G.set(heroBits(), { autoAlpha: 0 });
@@ -2070,6 +2243,7 @@ const heroIn = (instant) => {
     .fromTo(outs, { strokeDasharray: "1 1", strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut", stagger: 0.05 }, 0.8)
     .fromTo(sideOf("out"), { autoAlpha: 0, scale: 0.86, z: -60 }, { autoAlpha: 1, scale: 1, z: 28, duration: 0.8, ease: "power3.out", stagger: 0.07 }, 0.95)
     .add(() => Flow.box.classList.add("wired"), 1.5)
+    .fromTo([$(".flow__cols"), $("#flowCap")], { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, ease: "power2.out" }, 1.15)
     .to($("#nav"), { autoAlpha: 1, duration: 0.8, ease: "power2.out" }, 1.1);
   return tl;
 };
@@ -2191,6 +2365,27 @@ safe("cards", () => {
   });
 });
 
+/* ---------- Project filters: one kind of work at a time ---------- */
+safe("filters", () => {
+  const bar = $("#workFilters");
+  if (!bar) return;
+  const cards = $$("#cards .card"), btns = $$("button", bar);
+  const kinds = (c) => (c.dataset.cat || "").split(" ");
+  const match = (f) => cards.filter((c) => f === "all" || kinds(c).includes(f));
+  // The counts come from the cards themselves, so they can never drift from what a filter shows
+  btns.forEach((b) => { $("span", b).textContent = match(b.dataset.f).length; });
+  bar.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b || b.getAttribute("aria-pressed") === "true") return;
+    btns.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    const show = match(b.dataset.f);
+    cards.forEach((c) => { c.hidden = !show.includes(c); });
+    if (MOTION) G.fromTo(show, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.05, ease: "power2.out", overwrite: true });
+    // The section's height changed, so everything pinned below it has moved
+    if (ST) ST.refresh();
+  });
+});
+
 /* ---------- Thesis: one tissue tile through ProstadeNet's layers ----------
    Simplified diagram. Every feature map is a real 3×3 convolution (then ReLU, then 2×2 max pooling) run in the browser
    on a drawn sample tile, so the maps show what such filters pick out, not the thesis model's own weights. */
@@ -2302,9 +2497,18 @@ const Net = safe("net", () => {
     for (let y = 0; y < m; y++) for (let x = 0; x < m; x++) out[y * m + x] = Math.max(src[2 * y * n + 2 * x], src[2 * y * n + 2 * x + 1], src[(2 * y + 1) * n + 2 * x], src[(2 * y + 1) * n + 2 * x + 1]);
     return out;
   };
-  // A drawn H&E-style tile: pink stroma, pale glands ringed with nuclei, scattered dark nuclei
-  const drawTissue = (c, seed) => {
-    const x = c.getContext("2d"), S = c.width;
+  // A drawn H&E-style tile: pink stroma, pale glands ringed with nuclei, scattered dark nuclei. Each grade draws what
+  // gets worse as the cancer does: glands shrink, then fuse, then give way to solid sheets of crowded nuclei.
+  const LOOK = [
+    { gl: 7, sz: 1.1, fuse: 0, nu: 900, ns: 1 }, // 0: benign, large open glands
+    { gl: 11, sz: 0.62, fuse: 0, nu: 1100, ns: 1 }, // 1: small, separate, well-formed glands
+    { gl: 9, sz: 0.7, fuse: 0.3, nu: 1300, ns: 1.05 }, // 2: some glands fused
+    { gl: 7, sz: 0.75, fuse: 0.75, nu: 1600, ns: 1.1 }, // 3: most glands fused
+    { gl: 4, sz: 0.6, fuse: 1, nu: 2300, ns: 1.18 }, // 4: glands lose their shape
+    { gl: 1, sz: 0.5, fuse: 1, nu: 3100, ns: 1.25 }, // 5: sheets of cells
+  ];
+  const drawTissue = (c, seed, grade) => {
+    const x = c.getContext("2d"), S = c.width, L = LOOK[grade];
     const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     x.fillStyle = "#efc3d6";
     x.fillRect(0, 0, S, S);
@@ -2312,25 +2516,30 @@ const Net = safe("net", () => {
       x.fillStyle = `hsla(${325 + r() * 20},${40 + r() * 20}%,${68 + r() * 14}%,.35)`;
       x.beginPath(); x.ellipse(r() * S, r() * S, 6 + r() * 26, 3 + r() * 10, r() * Math.PI, 0, 7); x.fill();
     }
-    for (let g = 0; g < 7; g++) {
-      const cx = 50 + r() * (S - 100), cy = 50 + r() * (S - 100), rx = 26 + r() * 40, ry = 18 + r() * 28, rot = r() * Math.PI;
+    const gland = (cx, cy, rx, ry, rot) => {
       x.save(); x.translate(cx, cy); x.rotate(rot);
       x.fillStyle = "#fbf1f6"; x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, 7); x.fill();
       const n = Math.round(rx * 0.9);
       for (let k = 0; k < n; k++) {
         const a = (k / n) * Math.PI * 2;
         x.fillStyle = `hsla(${262 + r() * 16},50%,${30 + r() * 12}%,.9)`;
-        x.beginPath(); x.ellipse(Math.cos(a) * (rx + 4), Math.sin(a) * (ry + 4), 3.2, 2, a, 0, 7); x.fill();
+        x.beginPath(); x.ellipse(Math.cos(a) * (rx + 4), Math.sin(a) * (ry + 4), 3.2 * L.ns, 2 * L.ns, a, 0, 7); x.fill();
       }
       x.restore();
+    };
+    for (let g = 0; g < L.gl; g++) {
+      const cx = 50 + r() * (S - 100), cy = 50 + r() * (S - 100), rx = (26 + r() * 40) * L.sz, ry = (18 + r() * 28) * L.sz, rot = r() * Math.PI;
+      gland(cx, cy, rx, ry, rot);
+      // A fused gland: a second one grown into the side of the first
+      if (r() < L.fuse) gland(cx + Math.cos(rot) * rx * 0.9, cy + Math.sin(rot) * rx * 0.9, rx * 0.8, ry * 0.75, rot + 0.6);
     }
-    for (let i = 0; i < 1300; i++) {
+    for (let i = 0; i < L.nu; i++) {
       x.fillStyle = `hsla(${258 + r() * 24},${40 + r() * 20}%,${28 + r() * 18}%,${0.55 + r() * 0.4})`;
-      x.beginPath(); x.ellipse(r() * S, r() * S, 1.5 + r() * 2.5, 1.2 + r() * 1.6, r() * 3, 0, 7); x.fill();
+      x.beginPath(); x.ellipse(r() * S, r() * S, (1.5 + r() * 2.5) * L.ns, (1.2 + r() * 1.6) * L.ns, r() * 3, 0, 7); x.fill();
     }
   };
-  let maps = null, tile = null, big = null;
-  const drawTile = () => { big = document.createElement("canvas"); big.width = big.height = 512; drawTissue(big, 11); };
+  let maps = null, tile = null, big = null, grade = 3;
+  const drawTile = () => { big = document.createElement("canvas"); big.width = big.height = 512; drawTissue(big, 11 + grade * 101, grade); };
   const compute = () => {
     // Nuclei are dark, so 1 minus brightness makes them fire strongest
     const gray = (n) => {
@@ -2382,17 +2591,60 @@ const Net = safe("net", () => {
   }, { rootMargin: "300% 0px" });
   near.observe($("#net"));
 
+  // Illustrative softmax scores for one drawn tile of each grade, and what each grade means
+  const SCORES = [
+    [0.994, 0.003, 0.0015, 0.0008, 0.0004, 0.0003],
+    [0.004, 0.989, 0.004, 0.002, 0.0006, 0.0004],
+    [0.002, 0.006, 0.985, 0.005, 0.0015, 0.0005],
+    [0.001, 0.002, 0.004, 0.991, 0.0015, 0.0005],
+    [0.0005, 0.001, 0.002, 0.007, 0.986, 0.0035],
+    [0.0005, 0.0005, 0.001, 0.002, 0.0045, 0.9915],
+  ];
+  const WHY = [
+    "No cancer: benign glands, open and evenly spaced",
+    "Gleason 3+3: small, separate, well-formed glands",
+    "Gleason 3+4: mostly well-formed, some glands fused",
+    "Gleason 4+3: most glands fused or poorly formed",
+    "Gleason 8: the glands have mostly lost their shape",
+    "Gleason 9 to 10: solid sheets of cells, almost no glands",
+  ];
+  const rows = $$("#grades li"), bars = $$("#grades li > i b"), pcts = $$("#grades em"), pred = $("#pred"), tiles = $$("#tiles button");
+  let FINAL = SCORES[grade].slice();
+  // k is how far the scores have settled on the scroll timeline; the bars, the percentages and the top row all follow it
+  const score = { k: 1 };
+  const paintScores = () => {
+    let top = 0;
+    FINAL.forEach((p, i) => {
+      if (p > FINAL[top]) top = i;
+      // One decimal, the same as the prediction line under the list
+      const v = p * score.k, s = `${(v * 100).toFixed(1)}%`;
+      bars[i].style.transform = `scaleX(${v.toFixed(4)})`;
+      if (pcts[i].textContent !== s) pcts[i].textContent = s;
+    });
+    rows.forEach((li, i) => li.classList.toggle("top", i === top && score.k > 0.5));
+  };
+  // Another tile: draw it, run the filters on it again (a few milliseconds at these sizes) and move the scores across
+  tiles.forEach((b) => b.addEventListener("click", () => {
+    const g = +b.dataset.g;
+    if (g === grade) return;
+    grade = g;
+    tiles.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    if (big) {
+      drawTile(); compute(); paint();
+      if (MOTION && score.k > 0.99) G.fromTo(layers.flatMap((l) => l.planes), { opacity: 0.35 }, { opacity: 1, duration: 0.5, stagger: 0.008, ease: "power2.out", overwrite: true });
+    }
+    pred.innerHTML = `Predicted: <b>grade ${g}</b> · ${(SCORES[g][g] * 100).toFixed(1)}%<small>${WHY[g]}</small>`;
+    const from = FINAL.slice(), to = SCORES[g], mix = { v: 0 };
+    const blend = () => { FINAL = from.map((p, i) => p + (to[i] - p) * mix.v); paintScores(); };
+    if (MOTION) G.to(mix, { v: 1, duration: 0.7, ease: "power3.out", onUpdate: blend });
+    else { mix.v = 1; blend(); }
+  }));
+
   return {
     build() {
       const sec = $("#net");
       sec.classList.add("is-live");
-      const steps = $$("#netSteps li"), rows = $$("#grades li"), bars = $$("#grades li > i b"), pcts = $$("#grades em"), pred = $("#pred");
-      const FINAL = [0.003, 0.007, 0.013, 0.97, 0.005, 0.002];
-      const score = { k: 1 };
-      const paintScores = () => {
-        FINAL.forEach((p, i) => { const s = `${Math.round(p * score.k * 100)}%`; if (pcts[i].textContent !== s) pcts[i].textContent = s; });
-        rows[3].classList.toggle("top", score.k > 0.5);
-      };
+      const steps = $$("#netSteps li");
       // When each step starts on the timeline below: the tile, three conv and pool blocks, then the grades
       const STEP_AT = [0, 0.65, 1.49, 2.33, 3.17];
       let shown = -1;
@@ -2428,7 +2680,6 @@ const Net = safe("net", () => {
         .fromTo(arrows[arrows.length - 1], { scaleX: 0 }, { scaleX: 1, duration: 0.28 }, t)
         .fromTo(dots, { opacity: 0 }, { opacity: 0.9, duration: 0.12, stagger: { each: 0.02, from: "center" } }, t + 0.22)
         .to(packet, { opacity: 0, duration: 0.12 }, t + 0.3)
-        .fromTo(bars, { scaleX: 0 }, { scaleX: (i) => FINAL[i], duration: 0.5, ease: "power3.out" }, t + 0.38)
         .fromTo(score, { k: 0 }, { k: 1, duration: 0.5, ease: "power3.out", onUpdate: paintScores }, t + 0.38)
         .fromTo(pred, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.22 }, t + 0.8)
         .to({}, { duration: 0.45 });
@@ -2529,67 +2780,262 @@ const Claim = safe("claim", () => {
   };
 });
 
-/* ---------- Dashboards (sample data) ---------- */
-const Charts = safe("charts", () => {
-  const out = {};
-  const bars = $('[data-chart="bars"]');
-  {
-    const data = [12, 21, 29, 26, 18, 23, 34, 28, 20, 11], W = 340, H = 168, L = 26, R = 4, T = 14, B = 22, max = 40;
-    const s = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Sample data: claims worked per hour from 8:00 to 17:00, peaking at 34 at 14:00." }, bars);
-    [0, 10, 20, 30, 40].forEach((v) => {
-      const y = T + (1 - v / max) * (H - T - B);
-      svgEl("line", { x1: L, x2: W - R, y1: y, y2: y, class: "gridl" }, s);
-      svgEl("text", { x: L - 8, y: y + 3.5, class: "ax", "text-anchor": "end" }, s).textContent = v;
+/* ---------- Dashboards: a case study on sample claims, generated in the visitor's browser ----------
+   Twelve weeks of claims for a clinic with an imaging suite, seeded so every visitor gets the same rows. Every number on
+   the board, in the query results and in the story is counted from those rows, so none of them can disagree. */
+const Case = safe("case", () => {
+  const host = $("#case");
+  if (!host) return null;
+  const PAYERS = [["Medicare", 0.3], ["Anthem BCBS", 0.24], ["Medicaid", 0.2], ["Healthfirst", 0.16], ["NYCE PPO", 0.1]];
+  const SHORT = ["Medicare", "Anthem", "Medicaid", "Healthfirst", "NYCE PPO"];
+  const REASONS = [["CO-16", "Missing information"], ["CO-11", "Diagnosis doesn't fit the procedure"], ["CO-97", "Bundled into another service"], ["CO-197", "No prior authorization"], ["CO-50", "Not medically necessary"], ["CO-29", "Filed too late"]];
+  // How often each denial reason hits an ordinary claim, and the clinic's procedure mix: code, price, share
+  const BASE = [0.016, 0.01, 0.008, 0.003, 0.006, 0.002];
+  const CPT = [["99213", 95, 0.3], ["99214", 140, 0.17], ["80053", 42, 0.1], ["85025", 28, 0.07], ["97110", 65, 0.06], ["72148", 1180, 0.15], ["70553", 1460, 0.09], ["73721", 1120, 0.06]];
+  const MRI = new Set(["72148", "70553", "73721"]);
+  const BLUE = 1, AUTH = 3;
+  let weeks = null, V = null, CAUGHT = 0, step = 0, sel = null, ready = false, seen = false;
+
+  const generate = () => {
+    let seed = 20418;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const pick = (list) => { let u = rnd(), i = 0; for (; i < list.length - 1; i++) { u -= list[i][list[i].length - 1]; if (u < 0) break; } return i; };
+    const out = [];
+    let id = 20000;
+    for (let week = 1; week <= 12; week++) {
+      const rows = [], n = 600 + Math.round(rnd() * 60);
+      for (let k = 0; k < n; k++) {
+        const p = pick(PAYERS), c = pick(CPT), cpt = CPT[c][0], billed = Math.round(CPT[c][1] * (0.9 + rnd() * 0.25));
+        // From week 5 Anthem wants a prior auth number on every MRI, and most bookings go out without one.
+        // The morning check goes live during week 7 and catches all of them from week 8.
+        const missing = p === BLUE && MRI.has(cpt) && week >= 5 && rnd() < 0.92;
+        const caught = missing && (week >= 8 || (week === 7 && rnd() < 0.5));
+        let carc = -1;
+        if (missing && !caught) carc = AUTH;
+        else if (!missing) for (let r = 0; r < BASE.length; r++) if (rnd() < BASE[r] * (r === AUTH && MRI.has(cpt) ? 4 : 1)) { carc = r; break; }
+        rows.push({ id: id++, week, p, cpt, billed, carc, caught });
+      }
+      out.push(rows);
+    }
+    return out;
+  };
+
+  // The counting, the same way the SQL on the board would do it
+  const span = (a, b) => weeks.slice(a - 1, b).flat();
+  const firstPass = (rows) => (100 * rows.filter((c) => c.carc < 0).length) / rows.length;
+  const denied = (rows) => rows.filter((c) => c.carc >= 0);
+  const grid = (rows) => { const g = PAYERS.map(() => REASONS.map(() => 0)); for (const c of rows) if (c.carc >= 0) g[c.p][c.carc]++; return g; };
+  const view = (a, b, baseA, baseB) => {
+    const rows = span(a, b), base = span(baseA, baseB), d = denied(rows), dBase = denied(base);
+    const byR = REASONS.map((_, r) => d.filter((c) => c.carc === r).length), top = byR.indexOf(Math.max(...byR));
+    return { a, b, baseA, baseB, rows, g: grid(rows), fp: firstPass(rows), fpBase: firstPass(base), den: d.length, denBase: dBase.length,
+      amt: d.reduce((s, c) => s + c.billed, 0), amtBase: dBase.reduce((s, c) => s + c.billed, 0), top, topShare: (100 * byR[top]) / d.length };
+  };
+  // One formatter for every count: toLocaleString builds a new one on each call
+  const NF = new Intl.NumberFormat("en-US");
+  const money = (v) => `$${(v / 1000).toFixed(1)}k`, pct = (v) => `${v.toFixed(1)}%`, num = (v) => NF.format(Math.round(v));
+  const wk = (v) => `weeks ${v.a} – ${v.b}`;
+
+  const steps = $$(".case__steps button", host), say = $("#caseSay"), heat = $("#heat"), heatWhen = $("#heatWhen"), heatKey = $("#heatKey");
+  const sqlEl = $("#sql"), sqlTitle = $("#sqlTitle"), res = $("#res"), wfItems = $$("#wf li"), wfN = $("#wfN"), wfL = $("#wfL"), wfState = $("#wfState");
+  const K = {};
+  $$(".kpi", host).forEach((el) => { K[el.dataset.k] = { el, b: $("b", el), em: $("em", el) }; });
+  let cells = [], T = null, MAXC = 1;
+
+  // SQL with keywords, strings, numbers and comments picked out; the text is all written here, nothing comes from outside
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const hl = (line) => line.startsWith("--") ? `<span class="c">${esc(line)}</span>` : line.split(/('[^']*')/).map((part, i) => i % 2
+    ? `<span class="s">${esc(part)}</span>`
+    : esc(part).replace(/\b(SELECT|FROM|WHERE|AND|GROUP BY|ORDER BY|LIMIT|AS|IN|IS NOT NULL|IS NULL|BETWEEN|COUNT|ROUND|AVG|DESC)\b|\b(\d+(?:\.\d+)?)\b/g, (m, k, n) => (k ? `<span class="k">${k}</span>` : `<span class="n">${n}</span>`))).join("");
+  const table = (cols, rows, note) => `<table><thead><tr>${cols.map((c) => `<th scope="col">${c}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="res__n">${note}</p>`;
+  const showQuery = (title, sql, cols, rows, note) => {
+    sqlTitle.textContent = title;
+    sqlEl.innerHTML = sql.map((l) => `<span class="ln">${hl(l)}</span>`).join("");
+    res.innerHTML = table(cols, rows, note);
+    if (MOTION && seen) {
+      G.fromTo($$(".ln", sqlEl), { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.32, stagger: 0.09, ease: "steps(14)", overwrite: true });
+      G.fromTo(res, { autoAlpha: 0, y: 6 }, { autoAlpha: 1, y: 0, duration: 0.4, delay: 0.25, ease: "power2.out", overwrite: true });
+    }
+  };
+
+  const buildHeat = () => {
+    heat.innerHTML = `<span></span>${REASONS.map(([c, t]) => `<span class="heat__c" title="${t}">${c}</span>`).join("")}` +
+      SHORT.map((name, p) => `<span class="heat__r">${name}</span>${REASONS.map((_, r) => `<button type="button" class="heat__x" data-p="${p}" data-r="${r}" aria-pressed="false"></button>`).join("")}`).join("");
+    cells = $$(".heat__x", heat);
+    heat.addEventListener("click", (e) => {
+      const b = e.target.closest(".heat__x");
+      if (!b) return;
+      sel = [+b.dataset.p, +b.dataset.r];
+      if (step === 0) setStep(1); else render();
     });
-    const slot = (W - L - R) / data.length, bw = Math.min(20, slot * 0.62), peak = data.indexOf(Math.max(...data));
-    const rects = data.map((v, i) => {
-      const x = L + i * slot + (slot - bw) / 2, h = (v / max) * (H - T - B), y = H - B - h;
-      const rc = svgEl("rect", { x: x.toFixed(1), y: y.toFixed(1), width: bw.toFixed(1), height: h.toFixed(1), rx: 3, class: `bar${i === peak ? " hot" : ""}` }, s);
-      svgEl("text", { x: (x + bw / 2).toFixed(1), y: H - 6, class: "ax", "text-anchor": "middle" }, s).textContent = 8 + i;
-      if (i === peak) svgEl("text", { x: (x + bw / 2).toFixed(1), y: (y - 6).toFixed(1), class: "ax ax--hot", "text-anchor": "middle" }, s).textContent = v;
-      return rc;
+  };
+  const paintHeat = (v) => {
+    cells.forEach((b) => {
+      const p = +b.dataset.p, r = +b.dataset.r, n = v.g[p][r], a = n ? 0.08 + 0.82 * Math.pow(n / MAXC, 0.6) : 0;
+      b.style.setProperty("--a", a.toFixed(3));
+      b.textContent = n;
+      b.classList.toggle("ink", a > 0.5);
+      b.setAttribute("aria-label", `${PAYERS[p][0]}, ${REASONS[r][0]}, ${REASONS[r][1]}: ${n} denials`);
+      b.setAttribute("aria-pressed", String(!!sel && sel[0] === p && sel[1] === r));
+      b.classList.toggle("hint", step === 1 && !sel && p === BLUE && r === AUTH);
     });
-    out.bars = () => G.fromTo(rects, { scaleY: 0, transformOrigin: "50% 100%" }, { scaleY: 1, duration: 0.9, stagger: 0.05, ease: "power3.out" });
-  }
-  {
-    const host = $('[data-chart="donut"]');
-    const s = svgEl("svg", { viewBox: "0 0 140 140", role: "img", "aria-label": "Sample data: 94% of claims accepted on first submission this week." }, host);
-    svgEl("circle", { cx: 70, cy: 70, r: 54, class: "dn-bg" }, s);
-    const fg = svgEl("circle", { cx: 70, cy: 70, r: 54, class: "dn-fg", transform: "rotate(-90 70 70)", pathLength: 100, "stroke-dasharray": "94 100" }, s);
-    const t = svgEl("text", { x: 70, y: 76, class: "dn-num", "text-anchor": "middle" }, s);
-    t.textContent = "94%";
-    svgEl("text", { x: 70, y: 96, class: "dn-sub", "text-anchor": "middle" }, s).textContent = "first pass";
-    out.donut = () => {
-      G.fromTo(fg, { attr: { "stroke-dasharray": "0 100" } }, { attr: { "stroke-dasharray": "94 100" }, duration: 1.4, ease: "power2.out" });
-      const o = { v: 0 };
-      G.to(o, { v: 94, duration: 1.4, ease: "power2.out", onUpdate: () => { t.textContent = `${Math.round(o.v)}%`; } });
+    heatWhen.textContent = wk(v);
+  };
+
+  const buildTrend = (weekly) => {
+    const W = 360, H = 190, L = 34, R = 12, Tp = 30, B = 24, lo = 84, hi = 100;
+    const X = (w) => L + ((w - 1) / 11) * (W - L - R), Y = (v) => Tp + (1 - (v - lo) / (hi - lo)) * (H - Tp - B);
+    const s = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, $("#caseTrend"));
+    [85, 90, 95, 100].forEach((v) => {
+      svgEl("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: "gridl" }, s);
+      svgEl("text", { x: L - 7, y: Y(v) + 3.5, class: "ax", "text-anchor": "end" }, s).textContent = `${v}%`;
+    });
+    for (let w = 1; w <= 12; w++) svgEl("text", { x: X(w), y: H - 6, class: "ax", "text-anchor": "middle" }, s).textContent = w;
+    // The two marks are two weeks apart, so the first label reads leftward from its line and the second rightward
+    const annot = (w, label, left) => {
+      const g = svgEl("g", { class: "annot" }, s);
+      svgEl("line", { x1: X(w), x2: X(w), y1: Tp - 10, y2: H - B }, g);
+      svgEl("text", { x: X(w) + (left ? -4 : 4), y: Tp - 12, "text-anchor": left ? "end" : "start" }, g).textContent = label;
+      return g;
     };
-  }
-  {
-    const host = $('[data-chart="line"]'), N = 30;
-    const vals = Array.from({ length: N }, (_, i) => 48.2 - 16.8 * Math.pow(i / (N - 1), 0.9) + Math.sin(i * 1.3) * 1.1 + Math.sin(i * 0.45) * 0.8);
-    const W = 340, H = 150, L = 30, R = 30, T = 12, B = 22, lo = 25, hi = 50;
-    const x = (i) => L + (i / (N - 1)) * (W - L - R), y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-    const s = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Sample data: open accounts receivable fell from $${vals[0].toFixed(1)}k to $${vals[N - 1].toFixed(1)}k over 30 days.` }, host);
-    const defs = svgEl("defs", {}, s), lg = svgEl("linearGradient", { id: "arFill", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    svgEl("stop", { offset: "0", class: "st1" }, lg); svgEl("stop", { offset: "1", class: "st2" }, lg);
-    [30, 40, 50].forEach((v) => { svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "gridl" }, s); svgEl("text", { x: L - 6, y: y(v) + 3.5, class: "ax", "text-anchor": "end" }, s).textContent = `${v}k`; });
-    [[0, "30 days ago"], [N - 1, "today"]].forEach(([i, lab], j) => { svgEl("text", { x: x(i), y: H - 5, class: "ax", "text-anchor": j ? "end" : "start" }, s).textContent = lab; });
-    const d = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join("");
-    const area = svgEl("path", { d: `${d}L${x(N - 1).toFixed(1)} ${H - B}L${x(0).toFixed(1)} ${H - B}Z`, class: "ar-fill" }, s);
-    const line = svgEl("path", { d, class: "lnc", pathLength: 1 }, s);
-    const end = svgEl("circle", { cx: x(N - 1), cy: y(vals[N - 1]), r: 4, class: "endpt" }, s);
-    svgEl("text", { x: x(N - 1) + 6, y: y(vals[N - 1]) - 8, class: "ax ax--hot", "text-anchor": "start" }, s).textContent = `$${vals[N - 1].toFixed(1)}k`;
-    out.line = () => {
-      G.fromTo(line, { strokeDasharray: "1 1", strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.6, ease: "power2.inOut" });
-      G.fromTo(area, { opacity: 0 }, { opacity: 1, duration: 1.2, delay: 0.5 });
-      G.fromTo(end, { scale: 0, transformOrigin: "50% 50%" }, { scale: 1, duration: 0.5, delay: 1.4, ease: "back.out(3)" });
-    };
-  }
-  out.hbars = () => G.fromTo($$(".hbar__fill"), { scaleX: 0 }, { scaleX: (i, el) => parseFloat(el.style.getPropertyValue("--v")), duration: 1.1, stagger: 0.08, ease: "power3.out" });
-  out.sql = () => G.fromTo($$("#sql .ln"), { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.5, stagger: 0.22, ease: "steps(18)" });
-  out.wf = () => G.fromTo($$(".wf li"), { autoAlpha: 0, x: -10 }, { autoAlpha: 1, x: 0, duration: 0.5, stagger: 0.12, ease: "power2.out" });
-  return out;
+    const a5 = annot(5, "new auth rule", true), a7 = annot(7, "check live", false);
+    const pts = weekly.map((v, i) => [X(i + 1), Y(v)]);
+    const path = (a, b) => pts.slice(a, b + 1).map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("");
+    const before = svgEl("path", { d: path(0, 5), class: "lnc", pathLength: 1 }, s);
+    const after = svgEl("path", { d: path(5, 11), class: "lnc", pathLength: 1 }, s);
+    const dots = pts.map(([x, y], i) => svgEl("circle", { cx: x, cy: y, r: 3, class: "wkpt" }, s));
+    const low = weekly[4] < weekly[5] ? 4 : 5;
+    dots[low].setAttribute("class", "lowpt");
+    dots[low].setAttribute("r", 4.5);
+    const lowT = svgEl("text", { x: pts[low][0], y: pts[low][1] + 16, class: "ax ax--hot", "text-anchor": "middle" }, s);
+    lowT.textContent = pct(weekly[low]);
+    const endT = svgEl("text", { x: pts[11][0], y: pts[11][1] - 10, class: "ax ax--hot", "text-anchor": "end" }, s);
+    endT.textContent = pct(weekly[11]);
+    s.setAttribute("aria-label", `First-pass acceptance by week: about ${pct(weekly[3])} in week 4, ${pct(weekly[low])} in week ${low + 1} after the new auth rule, and ${pct(weekly[11])} by week 12 after the fix.`);
+    return { before, after, later: [...dots.slice(6), endT], a5, a7 };
+  };
+  const paintTrend = (instant) => {
+    const on = (els, show) => (MOTION && !instant ? G.to(els, { autoAlpha: show ? 1 : 0, duration: 0.4, overwrite: true }) : G ? G.set(els, { autoAlpha: show ? 1 : 0 }) : els.forEach((e) => { e.style.opacity = show ? 1 : 0; }));
+    on([T.a5], step >= 1);
+    on([T.a7, ...T.later], step === 2);
+    const off = step === 2 ? 0 : 1;
+    if (MOTION && !instant) G.to(T.after, { strokeDasharray: "1 1", strokeDashoffset: off, duration: 1, ease: "power2.inOut", overwrite: true });
+    else { T.after.style.strokeDasharray = "1 1"; T.after.style.strokeDashoffset = off; }
+  };
+
+  const setKpi = (k, text, note, cls, hot) => {
+    const o = K[k];
+    if (o.b.textContent !== text) {
+      o.b.textContent = text;
+      if (MOTION && seen) G.fromTo(o.b, { autoAlpha: 0.2, y: 6 }, { autoAlpha: 1, y: 0, duration: 0.45, ease: "power2.out", overwrite: true });
+    }
+    o.em.textContent = note;
+    o.em.className = cls || "";
+    o.el.classList.toggle("is-hot", hot);
+  };
+
+  const render = (instant) => {
+    const B = V.before, A = V.after, v = step === 2 ? A : B, after = step === 2;
+    steps.forEach((b, i) => b.setAttribute("aria-pressed", String(i === step)));
+    // The board
+    setKpi("fp", pct(v.fp), `${v.fp < v.fpBase ? "▼" : "▲"} ${Math.abs(v.fp - v.fpBase).toFixed(1)} pts vs ${wk({ a: v.baseA, b: v.baseB })}`, v.fp < v.fpBase ? "down" : "up", step !== 1);
+    setKpi("den", num(v.den), after ? `${Math.round((1 - v.den / v.denBase) * 100)}% fewer than before` : `${(v.den / v.denBase).toFixed(1)}× the 2 weeks before`, after ? "up" : "down", false);
+    setKpi("amt", money(v.amt), `was ${money(v.amtBase)}`, after ? "up" : "down", false);
+    setKpi("top", REASONS[v.top][0], `${Math.round(v.topShare)}% of denials · ${REASONS[v.top][1].toLowerCase()}`, "", step === 1);
+    paintHeat(v);
+    paintTrend(instant);
+    // The workflow only exists once the fix is in
+    wfState.textContent = after ? "runs every morning" : "not built yet";
+    wfItems.forEach((li) => { li.classList.toggle("todo", !after); li.classList.toggle("done", after); });
+    if (after && MOTION && !instant) G.fromTo(wfItems, { x: -8 }, { x: 0, duration: 0.4, stagger: 0.12, ease: "power2.out", overwrite: true });
+    wfN.textContent = after ? num(CAUGHT) : "0";
+    wfL.textContent = after ? "claims held in weeks 7 – 12 until their auth number was in" : "claims held so far";
+    heatKey.textContent = after ? "Same colour scale as weeks 5 – 6, so a cooler cell really is fewer denials." : sel ? "Pick another cell to compare." : "Darker means more denials. Pick a cell to see its claims.";
+    // The query panel and the story
+    const blue = v.g[BLUE][AUTH], blueB = B.g[BLUE][AUTH];
+    if (sel) {
+      const [p, r] = sel, rows = denied(v.rows).filter((c) => c.p === p && c.carc === r), mri = rows.filter((c) => MRI.has(c.cpt)).length;
+      showQuery(`${SHORT[p]} × ${REASONS[r][0]}`, [
+        "SELECT claim_id, cpt, billed",
+        "FROM claims",
+        `WHERE payer = '${PAYERS[p][0]}'`,
+        `  AND carc = '${REASONS[r][0]}'`,
+        `  AND week IN (${v.a}, ${v.b})`,
+        "ORDER BY billed DESC",
+        "LIMIT 5;",
+      ], ["claim_id", "cpt", "billed"], rows.slice().sort((x, y) => y.billed - x.billed).slice(0, 5).map((c) => [c.id, c.cpt, `$${num(c.billed)}`]),
+      `${num(rows.length)} rows match, ${Math.min(5, rows.length)} shown${rows.length ? ` · ${mri === rows.length ? "all" : num(mri)} of them MRIs` : ""}`);
+    } else if (step === 0) {
+      const w = weeks.slice(3, 6).map((rows, i) => [i + 4, pct(firstPass(rows))]).reverse();
+      showQuery("The query behind the number", [
+        "SELECT week,",
+        "       ROUND(100.0 * AVG(carc IS NULL), 1) AS first_pass",
+        "FROM claims",
+        "WHERE week BETWEEN 1 AND 6",
+        "GROUP BY week",
+        "ORDER BY week DESC",
+        "LIMIT 3;",
+      ], ["week", "first_pass"], w, "3 rows · the drop starts in week 5");
+    } else if (step === 1) {
+      const all = [];
+      v.g.forEach((row, p) => row.forEach((n, r) => all.push([p, r, n])));
+      all.sort((x, y) => y[2] - x[2]);
+      showQuery("Where the denials come from", [
+        "SELECT payer, carc, COUNT(*) AS denials",
+        "FROM claims",
+        "WHERE carc IS NOT NULL",
+        `  AND week IN (${v.a}, ${v.b})`,
+        "GROUP BY payer, carc",
+        "ORDER BY denials DESC",
+        "LIMIT 3;",
+      ], ["payer", "carc", "denials"], all.slice(0, 3).map(([p, r, n]) => [PAYERS[p][0], REASONS[r][0], n]), `3 of ${all.filter((x) => x[2]).length} groups · the top one is ${Math.round((100 * all[0][2]) / v.den)}% of all denials`);
+    } else {
+      const held = weeks[11].filter((c) => c.caught);
+      showQuery("The check the workflow runs", [
+        "-- Runs at 7:00 every morning in a Retool workflow",
+        "SELECT claim_id, cpt, billed",
+        "FROM claims",
+        `WHERE payer = '${PAYERS[BLUE][0]}'`,
+        "  AND cpt IN ('72148', '70553', '73721')",
+        "  AND auth_no IS NULL",
+        "  AND status = 'ready';",
+      ], ["claim_id", "cpt", "billed"], held.slice(-3).reverse().map((c) => [c.id, c.cpt, `$${num(c.billed)}`]), `Week 12: ${num(held.length)} claims held until the auth number was in`);
+    }
+    const mriAll = denied(B.rows).filter((c) => c.p === BLUE && c.carc === AUTH && MRI.has(c.cpt)).length;
+    say.innerHTML = [
+      `<b>Monday, 9 am.</b> Over the last two weeks only ${pct(B.fp)} of claims were accepted on the first try, down from ${pct(B.fpBase)} the two weeks before. Denials rose from ${num(B.denBase)} to ${num(B.den)}, and ${money(B.amt)} of billing is stuck.`,
+      `<b>One query, one hot cell.</b> Grouping those ${num(B.den)} denials by payer and reason puts one cell far above the rest: ${PAYERS[BLUE][0]}, CO-197, no prior authorization, ${num(blueB)} denials. ${mriAll === blueB ? "Every one of them is an MRI." : `${num(mriAll)} of them are MRIs.`} ${SHORT[BLUE]} started asking for prior auth on MRIs in week 5, and nobody at the front desk knew yet.`,
+      `<b>The fix runs every morning.</b> A Retool workflow checks ${SHORT[BLUE]}'s MRI claims for an auth number and holds the ones without, so the front desk can get it before the claim goes out. By weeks 11 – 12, ${SHORT[BLUE]}'s CO-197 denials were down from ${num(blueB)} to ${num(blue)}, and first-pass acceptance was back to ${pct(A.fp)}.`,
+    ][step];
+  };
+  const setStep = (i) => { step = i; render(); };
+
+  const init = () => {
+    weeks = generate();
+    V = { before: view(5, 6, 3, 4), after: view(11, 12, 5, 6) };
+    MAXC = Math.max(...V.before.g.flat());
+    CAUGHT = weeks.slice(6).flat().filter((c) => c.caught).length;
+    buildHeat();
+    T = buildTrend(weeks.map(firstPass));
+    ready = true;
+    render(true);
+    if (MOTION) { G.set(T.before, { strokeDasharray: "1 1", strokeDashoffset: 1 }); G.set(cells, { autoAlpha: 0 }); }
+    io.observe($(".case__board", host));
+  };
+  steps.forEach((b) => b.addEventListener("click", () => { sel = null; setStep(+b.dataset.s); }));
+  // The first time the board is on screen, the trend draws in and the cells fill
+  const io = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    seen = true;
+    if (!MOTION) return;
+    G.fromTo(T.before, { strokeDasharray: "1 1", strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 1.4, ease: "power2.inOut" });
+    G.fromTo(cells, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, stagger: { each: 0.015, from: "start" }, ease: "power2.out" });
+  }, { rootMargin: "0px 0px -20% 0px" });
+  // Built straight away, before the scroll scenes are measured: the board's final height has to be known by then, or the
+  // pinned sections below it would start in the wrong place. The rows take a few milliseconds.
+  init();
+  return {};
 });
 
 $$(".steps").forEach((ol) => $$("li", ol).forEach((li, i) => { li.dataset.n = String(i + 1).padStart(2, "0"); }));
@@ -2756,9 +3202,9 @@ const Stroke = safe("stroke", () => {
 safe("skills", () => {
   const svg = $("#skillsSvg");
   if (!svg) return;
-  const P = [["School system", "#stack"], ["Dashboards", "#dash"], ["ProstadeNet", "#net"], ["Flutter apps", "#work"], ["Stroke ML", "#stroke"], ["Password CLI", "#work"], ["DocPro Health (RCM)", "#claim"]];
+  const P = [["School system", "#stack"], ["Dashboards", "#dash"], ["ProstadeNet", "#net"], ["Flutter apps", "#work"], ["Stroke ML", "#stroke"], ["Rampart", "#p-rampart"], ["DocPro Health (RCM)", "#claim"]];
   const S = [
-    ["SQL & MySQL", [0, 1]], ["PHP & Laravel", [0]], ["Retool", [1]], ["HTML, CSS & Tailwind", [0]],
+    ["SQL & MySQL", [0, 1, 5]], ["PHP & Laravel", [0]], ["Retool", [1]], ["HTML, CSS & Tailwind", [0]],
     ["Python", [2, 4]], ["TensorFlow & Keras", [2]], ["OpenCV", [2]], ["scikit-learn & pandas", [4]],
     ["Flutter & Dart", [3]], ["REST APIs", [3]], ["Bash & Linux", [5]], ["Git & GitHub", [0, 3, 4, 5]],
     ["CPT & ICD-10-CM coding", [6]], ["Claims, AR & denials", [6]],
@@ -2876,12 +3322,9 @@ safe("scroll", () => {
   G.set(".card", { autoAlpha: 0 });
   onEnter(".card", 10, (b) => G.fromTo(b, { autoAlpha: 0, y: 70, rotationX: -16, transformPerspective: 1000, transformOrigin: "50% 100%" }, { autoAlpha: 1, y: 0, rotationX: 0, duration: 1.1, ease: "power3.out", stagger: 0.09, onComplete: function () { this.targets().forEach((t) => { t.style.transform = ""; }); } }));
   onEnter(".card [data-count]", 8, (els) => els.forEach((el) => countUp(el)));
-  // Dashboard panels
+  // Dashboard panels rise in; the case study draws its own charts once its rows exist
   G.set(".panel", { autoAlpha: 0, y: 40 });
-  onEnter(".panel", 10, (b) => {
-    G.to(b, { autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08 });
-    b.forEach((p, i) => { const f = Charts && Charts[p.dataset.panel]; if (f) G.delayedCall(0.2 + i * 0.08, f); const cnt = $("[data-count]", p); if (cnt) countUp(cnt); });
-  });
+  onEnter(".panel", 10, (b) => G.to(b, { autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out", stagger: 0.08 }));
   // Numbers
   const nums = $$("[data-num]");
   nums.forEach((n) => G.set($(".meter", n), { scaleX: 0 }));
@@ -3016,9 +3459,11 @@ safe("details", () => {
 });
 
 runIntro();
-// Fonts change line lengths, so the pins are measured again once they are in. ScrollTrigger refreshes on load by itself.
+// Fonts change line lengths, so the pins are measured again once they are in, unless they were already in when the
+// scroll scenes were measured just above (they usually are now that they come from this site). ScrollTrigger refreshes
+// on load by itself.
 const settle = () => { if (ST) ST.refresh(); else if (Glow) Glow.measure(); };
-if (document.fonts) document.fonts.ready.then(settle);
+if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(settle);
 if (!ST) addEventListener("load", settle);
 </script>
 </body>
