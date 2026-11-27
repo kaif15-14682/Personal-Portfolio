@@ -8,7 +8,7 @@ Personal portfolio of Sheikh Kaif, a CSE graduate who builds the systems behind 
 
 ## What's inside
 
-- **Hero:** a live diagram of the work in three lanes: claim rows become a Retool dashboard, tissue slides become a ProstadeNet grade, and a day of patient visits becomes paid claims. The lanes take turns, a caption says what happens in each, and every card links to the part of the page where that work runs in full. A ribbon of light runs through the whole page.
+- **Hero:** a live diagram of the work in three lanes: claim rows become a Retool dashboard, tissue slides become a ProstadeNet grade, and a day of patient visits becomes paid claims. The lanes take turns. Hovering a card shows what it does (phones show it under the diagram), and clicking it jumps to the part of the page where that work runs in full. A ribbon of light runs through the whole page.
 - **Projects:** operations dashboards, the ProstadeNet thesis, a Laravel school management system, Rampart (a Bash tool that guards a data inbox), stroke risk prediction, Flutter apps and the Yui & Kai planner (a shared planner for two people on shift work). Each card has a live visual, a short description and links to how it works and to the code, and the list can be filtered by kind of work. Competitions from 2021 to 2025 close the list.
 - **Experience:** five roles on a timeline. The light becomes the timeline's line, and each role charges in as you reach it.
 - **Skills:** each skill, and where it was used.
