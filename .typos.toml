@@ -1,3 +1,7 @@
+[files]
+# Third-party minified scripts (GSAP, ScrollTrigger, Lenis): their short machine-made names are not words
+extend-exclude = ["assets/js/*.min.js"]
+
 [default.extend-words]
 # "pn" is a CSS class name in index.html, not a typo
 pn = "pn"
