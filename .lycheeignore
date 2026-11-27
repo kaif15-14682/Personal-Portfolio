@@ -1,0 +1,2 @@
+# LinkedIn answers link checkers with HTTP 999, so its links always look broken
+^https://www\.linkedin\.com/

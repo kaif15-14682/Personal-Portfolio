@@ -1,0 +1,2 @@
+.*Property .(x|y|rx|ry). doesn.t exist.*
+.*Attribute .pathLength. not allowed on element .*

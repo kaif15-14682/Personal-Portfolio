@@ -1,0 +1,3 @@
+[default.extend-words]
+# "pn" is a CSS class name in index.html, not a typo
+pn = "pn"

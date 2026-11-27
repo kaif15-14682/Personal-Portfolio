@@ -15,3 +15,6 @@
 # Personal image used only in the local demo; not for publishing
 /Whitebeard-Pirates-Tattoo-1.webp
 /1.jpg
+
+# Local Lighthouse CI results
+/.lighthouseci/
